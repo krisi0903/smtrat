@@ -1,16 +1,22 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graphviz.hpp>
 #include <vector>
 #include <iostream>
-#include "GraphChordality.h"
+#include <smtrat-cad/variableordering/GraphChordality.h>
 
+
+typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, VariableVertexProperties> Graph;
+    
 struct VariableVertexProperties {
     std::string name;
 };
 
+void print_graphviz(Graph const& g) {
+    boost::write_graphviz(std::cout, g, boost::get(&VariableVertexProperties::name));
+} 
 
 int main(void) {
-    typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, VariableVertexProperties> Graph;
     //std::map<boost::graph_traits<Graph>::vertex_descriptor, std::string> varmap;
 
     std::map<std::string, boost::graph_traits<Graph>::vertex_descriptor> vertex_map;
@@ -36,6 +42,8 @@ int main(void) {
         std::cout << g[*v].name << std::endl;
     }
 
+    print_graphviz(g);
+
     auto [peo, fill] = smtrat::mcs_m(g);
 
     std::cout << "PEO: ";
@@ -50,5 +58,7 @@ int main(void) {
         std::cout << "(" << g[item.first].name << ", " << g[item.second].name << "), ";
     }
     std::cout << std::endl;
+
+    write_graphviz(std::cout, g, )
 
 }
