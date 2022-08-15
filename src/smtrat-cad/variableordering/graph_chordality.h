@@ -82,19 +82,19 @@ namespace smtrat::cad::variable_ordering {
 
         // Copy the graph so we can remove vertices from it
         Graph g = chordalStructure;
-
-
-        std::map<Vertex<Graph>, Vertex<Graph>> vertex_backmap;
-
-        for(VertexIterator<Graph> copy_vertex = vertices(g).first; copy_vertex != vertices(g).second; copy_vertex++) {
-            for (VertexIterator<Graph> orig_vertex = vertices(chordalStructure).first; orig_vertex != vertices(chordalStructure).second; orig_vertex++) {
-                if (chordalStructure[*orig_vertex].name  == g[*copy_vertex].name) {
-                    vertex_backmap[*copy_vertex] = *orig_vertex;
-                    break;
-                }
-            }
-        }
         int n = boost::num_vertices(g);
+
+
+        // Create a vector that maps vertex IDs to vertex descriptors of the original graph
+        // This is used to map vertices descriptors of the copy graph to those of the original graph
+        // since the vertex descriptors will be different 
+        std::vector<Vertex<Graph>> vmap;
+        vmap.resize(n);
+
+        for (VertexIterator<Graph> v = vertices(chordalStructure).first; v != vertices(chordalStructure).second; v++) {
+            vmap[chordalStructure[*v].id] = *v;
+        }
+        
 
         std::cout << n << std::endl;
 
@@ -123,7 +123,7 @@ namespace smtrat::cad::variable_ordering {
                 }
             }
             
-            std::cout << "Max vertex is " << g[*max].name;
+            std::cout << "Max vertex is " << g[*max];
 
             /* A set that contains all vertices u
              * that are reachable from max over a path where
@@ -132,7 +132,7 @@ namespace smtrat::cad::variable_ordering {
              */
             std::list<Vertex<Graph>> S;
             for(VertexIterator<Graph> u = start; u != end; u++) {
-                std::cout << "check path to " << g[*u].name;
+                std::cout << "check path to " << g[*u];
                 // undirected graph - max does not have a path to itself
                 if (*u == *max) continue;
                 
@@ -161,18 +161,18 @@ namespace smtrat::cad::variable_ordering {
 
             std::cout << "Have vertices in S: ";
             for(auto u : S) {
-                std::cout << g[u].name;
+                std::cout << g[u];
                 weights[u]++;
                 // return value of edge is a pair - first is always an edge descriptor, second indicates whether the edge is actually there
                 if (!(boost::edge(*max, u, g).second)) {
                     std::cout << "adding fill edge";
-                    fill.push_back(std::make_pair(vertex_backmap[u], vertex_backmap[*max]));
+                    fill.push_back(std::make_pair(vmap[g[u].id], vmap[g[*max].id]));
                 }
             }
 
             std::cout << std::endl;
 
-            peo.push_front(vertex_backmap[*max]);
+            peo.push_front(vmap[g[*max].id]);
             boost::clear_vertex(*max, g);
             boost::remove_vertex(*max, g);
         }

@@ -1,4 +1,4 @@
-#include "triangular_ordering.h"
+#include "pseudorandom_ordering.h"
 
 #include <algorithm>
 #include <numeric>
@@ -21,10 +21,9 @@ std::vector<carl::Variable> pseudorandom_ordering(const std::vector<Poly>& polys
     SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Seed value for RNG is " << seed);
 
     std::default_random_engine rng(seed);
-    std::uniform_int_distribution dist;
 
     std::vector<carl::Variable> res = vars.as_vector();
-    std::shuffle(res.begin(), res.end(), dist);
+    std::shuffle(res.begin(), res.end(), rng);
 
 	SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Sorted: " << res);
 	return res;
