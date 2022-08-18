@@ -89,12 +89,18 @@ namespace cad {
 		const auto& getBounds() const {
 			return mConstraints.bounds();
 		}
+
 		void reset(const std::vector<carl::Variable>& vars) {
 			mVariables = vars;
 			mConstraints.reset(mVariables);
 			mProjection.reset();
 			mLifting.reset(std::vector<carl::Variable>(vars.rbegin(), vars.rend()));
 		}
+
+		void reset(const std::vector<Poly>& polys) {
+			reset(Settings::variableOrdering(polys));
+		}
+
 		void addConstraint(const ConstraintT& c) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Adding " << c);
 			mConstraints.add(c);

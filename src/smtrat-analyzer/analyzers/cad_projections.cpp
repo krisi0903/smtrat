@@ -8,6 +8,7 @@
 #include <smtrat-cad/projectionoperator/utils.h>
 #include <smtrat-cad/utils/CADConstraints.h>
 #include <smtrat-cad/variableordering/triangular_ordering.h>
+#include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
 
 namespace smtrat::analyzer {
 
@@ -56,7 +57,11 @@ void perform_projection(const std::string& prefix, const std::set<ConstraintT>& 
 	for (const auto& c: constraints) {
 		polys.emplace_back(c.lhs());
 	}
-	p.mConstraints.reset(cad::variable_ordering::triangular_ordering(polys));
+	// TODO: this is kind of a hack, would be nicer to overload reset in constraints
+	// with a method that takes polys and performs the ordering in settings
+	// However, this will not work in the current state since we do not pass the 
+	// complete Settings
+	p.mConstraints.reset(Settings::variableOrdering(polys));
 	p.mProjection.reset();
 	for (const auto& c: constraints) {
 		p.add(c);

@@ -9,6 +9,7 @@
 #include "NewCADModule.h"
 #include <smtrat-cad/projection/Projection.h>
 #include <smtrat-cad/variableordering/triangular_ordering.h>
+#include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
 
 namespace smtrat
 {
@@ -85,7 +86,7 @@ namespace smtrat
 	{
 		if (mCAD.dim() != mVariables.size()) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Init with " << mPolynomials);
-			mCAD.reset(cad::variable_ordering::triangular_ordering(mPolynomials));
+			mCAD.reset(mPolynomials);
 		}
 #ifdef SMTRAT_DEVOPTION_Statistics
 		mStatistics.called();

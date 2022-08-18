@@ -9,6 +9,10 @@
 #pragma once
 
 #include <smtrat-cad/Settings.h>
+#include <smtrat-cad/variableordering/triangular_ordering.h>
+#include <smtrat-cad/variableordering/pseudorandom_ordering.h>
+#include <smtrat-cad/variableordering/chordal_vargraph_ordering.h>
+#include <smtrat-cad/variableordering/common.h>
 
 namespace smtrat {
 namespace cad {
@@ -96,6 +100,7 @@ namespace cad {
 
 		static constexpr bool pp_disable_variable_elimination = true;
 		static constexpr bool pp_disable_resultants = true;
+		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
 		
 	};
 	
@@ -121,6 +126,26 @@ namespace cad {
 	
 	struct NewCADSettingsFU: NewCADBaseSettings, cad::IncrementalityFU, cad::ProjectionBrown, cad::SampleCompareLT, cad::ProjectionOrderDefault {
 		static constexpr auto moduleName = "NewCADModule<NewCADFU>";
+	};
+
+	//
+	// Settings to test different variable orderings
+	//
+
+	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFU, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown;
+	struct NewCADSettingsTriangular: NewCADBaseVariableOrderSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADTriangular>";
+		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
+	};
+
+	struct NewCADSettingsPseudorandom: NewCADBaseVariableOrderSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADPseudorandom>";
+		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::pseudorandom_ordering;
+	};
+
+	struct NewCADSettingsChordal: NewCADBaseVariableOrderSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordal>";
+		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering;
 	};
 
 	//

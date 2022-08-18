@@ -1,0 +1,67 @@
+INFO  smtrat   smtratSolver.cpp:137  main(): Constructing strategy.
+INFO  smtrat.strategygraph Manager.h:389  setStrategy(): Strategygraph:
+Module (2)
+    SATModule<SATSettings1> (1)
+        NewCADModule<NewCADFO> (0)
+
+INFO  smtrat.strategygraph Manager.h:390  setStrategy(): Branches: 1
+WARN  smtrat   execute_smtlib.h:58   executeFile(): Running queued instructions.
+INFO  smtrat.module  Module.cpp:89   check(): check final full with module Module (0)
+INFO  smtrat.module  Module.cpp:1089 print(): 	********************************************************************************
+INFO  smtrat.module  Module.cpp:1090 print(): 	 Solver Module (0)
+INFO  smtrat.module  Module.cpp:1091 print(): 	
+INFO  smtrat.module  Module.cpp:1104 printReceivedFormula(): 		Received formula:
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*x*y + 2*x*z = 0
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*y*w + 2*z*w = 0
+INFO  smtrat.module  Module.cpp:1093 print(): 	
+INFO  smtrat.module  Module.cpp:1117 printPassedFormula(): 		Passed formula:
+INFO  smtrat.module  Module.cpp:1095 print(): 	
+INFO  smtrat.module  Module.cpp:1135 printInfeasibleSubsets(): 		Infeasible subsets:
+INFO  smtrat.module  Module.cpp:1097 print(): 	
+INFO  smtrat.module  Module.cpp:1098 print(): 	********************************************************************************
+INFO  smtrat.module  Module.cpp:89   check(): check final full with module SATModule<SATSettings1> (1)
+INFO  smtrat.module  Module.cpp:1089 print(): 	********************************************************************************
+INFO  smtrat.module  Module.cpp:1090 print(): 	 Solver SATModule<SATSettings1> (1)
+INFO  smtrat.module  Module.cpp:1091 print(): 	
+INFO  smtrat.module  Module.cpp:1104 printReceivedFormula(): 		Received formula:
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*x*y + 2*x*z = 0
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*y*w + 2*z*w = 0
+INFO  smtrat.module  Module.cpp:1093 print(): 	
+INFO  smtrat.module  Module.cpp:1117 printPassedFormula(): 		Passed formula:
+INFO  smtrat.module  Module.cpp:1095 print(): 	
+INFO  smtrat.module  Module.cpp:1135 printInfeasibleSubsets(): 		Infeasible subsets:
+INFO  smtrat.module  Module.cpp:1097 print(): 	
+INFO  smtrat.module  Module.cpp:1098 print(): 	********************************************************************************
+INFO  smtrat.module  Module.cpp:89   check(): check final full with module NewCADModule<NewCADFO> (2)
+INFO  smtrat.module  Module.cpp:1089 print(): 	********************************************************************************
+INFO  smtrat.module  Module.cpp:1090 print(): 	 Solver NewCADModule<NewCADFO> (2)
+INFO  smtrat.module  Module.cpp:1091 print(): 	
+INFO  smtrat.module  Module.cpp:1104 printReceivedFormula(): 		Received formula:
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*x*y + 2*x*z = 0 deducted
+INFO  smtrat.module  Module.cpp:1111 printReceivedFormula(): 		                                           -1*y*w + 2*z*w = 0 deducted
+INFO  smtrat.module  Module.cpp:1093 print(): 	
+INFO  smtrat.module  Module.cpp:1117 printPassedFormula(): 		Passed formula:
+INFO  smtrat.module  Module.cpp:1095 print(): 	
+INFO  smtrat.module  Module.cpp:1135 printInfeasibleSubsets(): 		Infeasible subsets:
+INFO  smtrat.module  Module.cpp:1097 print(): 	
+INFO  smtrat.module  Module.cpp:1098 print(): 	********************************************************************************
+INFO  smtrat.cad          CAD.h:199  check(): Current projection:
+0
+	P: [2: (-1*y + 2*z)*x^1 + 0 [0: ], -1*y*w + 2*z*w [0: ]]
+1 / x
+	P: [0: ]
+	L: {0: }
+2 / w
+	P: [0: ]
+	L: {0: }
+3 / y
+	P: [0: ]
+	L: {0: }
+4 / z
+	P: [0: ]
+	L: {0: }
+Q: [(0,0)@0, (1,1)@0]
+
+INFO  smtrat.module  Module.cpp:866  foundAnswer(): foundAnswer of NewCADModule<NewCADFO> (2) is SAT
+INFO  smtrat.module  Module.cpp:866  foundAnswer(): foundAnswer of SATModule<SATSettings1> (1) is SAT
+INFO  smtrat.module  Module.cpp:866  foundAnswer(): foundAnswer of Module (0) is SAT

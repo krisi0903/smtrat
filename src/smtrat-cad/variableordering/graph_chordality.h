@@ -5,6 +5,7 @@
 #include <boost/graph/properties.hpp>
 #include <boost/graph/visitors.hpp>
 
+#include <smtrat-common/smtrat-common.h>
 #include <numeric>
 #include <algorithm>
 
@@ -23,9 +24,14 @@ namespace smtrat::cad::variable_ordering {
     
     template <typename Graph>
     using VertexIterator = typename boost::graph_traits<Graph>::vertex_iterator;    
-
-
-    // Auxiliary filter for filtering a graph for edges
+    
+    // Computes the MCS-M Algorithm on the input graph
+    // This computes a minimal chordal completion and the according perfect elimination ordering
+    // (a minimal elimination ordering for the input graph)
+    // Note that the input graph is modified during the procedure to add the fill edges
+    // Currently, we pass by-value since we modify the graph
+    
+        // Auxiliary filter for filtering a graph for edges
     // keeps only edges where both vertices are kept by VertexFilterPredicate
     template <typename VertexFilterPredicate, typename Graph>
     class keep_unfiltered {
@@ -68,7 +74,7 @@ namespace smtrat::cad::variable_ordering {
     // Type of a filtered graph filtered by vertex weights
     template <typename Graph>
     using MCSFilteredGraph = typename boost::filtered_graph<Graph, keep_unfiltered<VertexWeightFilter<Graph>, Graph>, VertexWeightFilter<Graph>>;
-    
+
     // Computes the MCS-M Algorithm on the input graph
     // This computes a minimal chordal completion and the according perfect elimination ordering
     // (a minimal elimination ordering for the input graph)
@@ -96,7 +102,7 @@ namespace smtrat::cad::variable_ordering {
         }
         
 
-        std::cout << n << std::endl;
+        SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Graph vertex count: " << n) 
 
         // Each vertex requires a weight for the algorithm
         std::map<Vertex<Graph>, unsigned int> weights;
@@ -123,7 +129,7 @@ namespace smtrat::cad::variable_ordering {
                 }
             }
             
-            std::cout << "Max vertex is " << g[*max];
+            SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Max vertex is " << g[*max]);
 
             /* A set that contains all vertices u
              * that are reachable from max over a path where
@@ -132,9 +138,10 @@ namespace smtrat::cad::variable_ordering {
              */
             std::list<Vertex<Graph>> S;
             for(VertexIterator<Graph> u = start; u != end; u++) {
-                std::cout << "check path to " << g[*u];
                 // undirected graph - max does not have a path to itself
                 if (*u == *max) continue;
+
+                SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "check for path from " << g[*max] << "to" << g[*u]);
                 
                 // we need to find a path from max to u 
                 // that is either a direct edge or only has intermediary vertices with weight < w(u)
@@ -159,18 +166,13 @@ namespace smtrat::cad::variable_ordering {
                 }
             }
 
-            std::cout << "Have vertices in S: ";
             for(auto u : S) {
-                std::cout << g[u];
                 weights[u]++;
                 // return value of edge is a pair - first is always an edge descriptor, second indicates whether the edge is actually there
                 if (!(boost::edge(*max, u, g).second)) {
-                    std::cout << "adding fill edge";
                     fill.push_back(std::make_pair(vmap[g[u].id], vmap[g[*max].id]));
                 }
             }
-
-            std::cout << std::endl;
 
             peo.push_front(vmap[g[*max].id]);
             boost::clear_vertex(*max, g);

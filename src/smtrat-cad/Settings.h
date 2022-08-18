@@ -1,6 +1,7 @@
 #pragma once
 
 #include <carl-arith/ran/ran.h>
+#include <smtrat-cad/variableordering/variableordering.h>
 
 namespace smtrat {
 namespace cad {
@@ -11,6 +12,7 @@ namespace cad {
 		D, PD, SD, lD, LD,
 		Default = lD
 	};
+
 	enum class SampleCompareStrategy { 
 		T,
 		TLSA,
@@ -43,6 +45,8 @@ namespace cad {
 		static constexpr ProjectionCompareStrategy projectionComparator = cad::ProjectionCompareStrategy::Default;
 		static constexpr SampleCompareStrategy sampleComparator = cad::SampleCompareStrategy::Default;
 		static constexpr FullSampleCompareStrategy fullSampleComparator = cad::FullSampleCompareStrategy::Default;
+
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = cad::variable_ordering::triangular_ordering;
 	};
 }
 }
