@@ -11,8 +11,8 @@
 #include <smtrat-cad/Settings.h>
 #include <smtrat-cad/variableordering/triangular_ordering.h>
 #include <smtrat-cad/variableordering/pseudorandom_ordering.h>
-#include <smtrat-cad/variableordering/chordal_vargraph_ordering.h>
-#include <smtrat-cad/variableordering/common.h>
+#include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
+#include <smtrat-cad/variableordering/variableordering.h>
 
 namespace smtrat {
 namespace cad {
@@ -100,7 +100,7 @@ namespace cad {
 
 		static constexpr bool pp_disable_variable_elimination = true;
 		static constexpr bool pp_disable_resultants = true;
-		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
 		
 	};
 	
@@ -131,21 +131,22 @@ namespace cad {
 	//
 	// Settings to test different variable orderings
 	//
+	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFU, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown {};
 
-	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFU, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown;
-	struct NewCADSettingsTriangular: NewCADBaseVariableOrderSettings {
+
+	struct NewCADSettingsTriangular: NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADTriangular>";
-		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::triangular_ordering;
 	};
 
-	struct NewCADSettingsPseudorandom: NewCADBaseVariableOrderSettings {
+	struct NewCADSettingsPseudorandom: NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADPseudorandom>";
-		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::pseudorandom_ordering;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::pseudorandom_ordering;
 	};
 
-	struct NewCADSettingsChordal: NewCADBaseVariableOrderSettings {
+	struct NewCADSettingsChordal: NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADChordal>";
-		static constexpr VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering;
 	};
 
 	//

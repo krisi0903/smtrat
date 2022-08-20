@@ -8,9 +8,13 @@ namespace smtrat::cad::variable_ordering {
 
 std::vector<carl::Variable> pseudorandom_ordering(const std::vector<Poly>& polys) {
 	SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Building order based on " << polys);
-    size_t seed = 0;
+
+    // construct a random seed from the polynomial hashes
+    // Starting value has no special meaning, just choose something non-zero
+    // otherwise we will always get 0
+    size_t seed = 0xcafecafecafecafe;
     for (Poly const& p : polys) {
-        seed ^= std::hash<Poly>()(p);
+        seed += std::hash<Poly>()(p) * seed;
     }
 
 
