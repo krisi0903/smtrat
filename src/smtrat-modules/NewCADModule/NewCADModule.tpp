@@ -10,7 +10,6 @@
 #include <smtrat-cad/projection/Projection.h>
 #include <smtrat-cad/variableordering/triangular_ordering.h>
 #include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
-
 namespace smtrat
 {
 	template<class Settings>
@@ -88,7 +87,10 @@ namespace smtrat
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Init with " << mPolynomials);
 			mCAD.reset(mPolynomials);
 		}
+		SMTRAT_STATISTICS_INIT(smtrat::cad::CADVOStatistics, voStatistics, std::string("CADVOStatistics"));
 #ifdef SMTRAT_DEVOPTION_Statistics
+		voStatistics._add("polys.size", mPolynomials.size());
+		voStatistics._add("vars.size", mVariables.size());
 		mStatistics.called();
 #endif
 		if (Settings::force_nonincremental) {
@@ -109,9 +111,17 @@ namespace smtrat
 			mCAD.removeConstraint(c);
 		}
 		SMTRAT_LOG_DEBUG("smtrat.cad", "Performing actual check");
+		#ifdef SMTRAT_DEVOPTION_Statistics
+		auto checkStart = carl::statistics::timing::now();
+		#endif
+
 		auto answer = mCAD.check(mLastAssignment, mInfeasibleSubsets);
 #ifdef SMTRAT_DEVOPTION_Statistics
 		mStatistics.currentProjectionSize(mCAD.getProjection().size());
+		voStatistics._add("time", carl::statistics::timing::since(checkStart).count());
+
+		voStatistics.collectLiftingInformation<Settings>(mCAD.getLifting());
+		voStatistics.collectProjectionInformation<Settings>(mCAD.getProjection());
 #endif
 		if (answer == Answer::UNSAT) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Found to be unsat");
@@ -143,6 +153,9 @@ namespace smtrat
 				}
 			}
 		}
+		#ifdef SMTRAT_DEVOPTION_STATISTICS
+		mStatistics.nextRun();
+		#endif
 		return answer;
 	}
 }

@@ -6,6 +6,7 @@
 #include <filesystem>
 #include "graph_chordality.h"
 #include "chordal_vargraph_elimination_ordering.h"
+#include <smtrat-cad/CADVOStatistics.h>
 
 
 namespace smtrat::cad::variable_ordering {
@@ -29,7 +30,7 @@ namespace smtrat::cad::variable_ordering {
 
     // a little hack because I do not know where to put this setting
     // enables writing the graph with colored fill-in edges to a file
-    constexpr bool debugChordalVargraph = false;
+    constexpr bool debugChordalVargraph = true;
 
 
     /*!
@@ -77,6 +78,7 @@ namespace smtrat::cad::variable_ordering {
     } 
 
     std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vector<Poly>& polys) {
+        SMTRAT_STATISTICS_INIT(CADVOStatistics, statistics, "CADVOStatistics");
         SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Building order based on " << polys);
 
         typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, VariableVertexProperties, VariableEdgeProperties> ChordalStructure;
@@ -90,9 +92,12 @@ namespace smtrat::cad::variable_ordering {
         // in the range [0; |V|)
         unsigned int id = 0;
 
+        carl::carlVariables varset;
+
         for (const Poly& p : polys) {
             // Make sure that we have a vertex for each variable in our graph
             for (auto var : carl::variables(p)) {
+                carl::variables(p, varset);
                 if (var_vertex_map.find(var) == var_vertex_map.end()) {
                     var_vertex_map[var] = boost::add_vertex({ .id=id++, .var = var}, chordal_structure);
                 }
@@ -113,6 +118,8 @@ namespace smtrat::cad::variable_ordering {
         auto [peo, fill] = mcs_m(chordal_structure);
         SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Have " << num_vertices(chordal_structure) << " vertices with " << num_edges(chordal_structure) << " edges. " << fill.size() << " fill-in edges to make graph chordal with given PEO, a percentage of " <<  100 * (fill.size() / (double) num_edges(chordal_structure) + fill.size()) << "%'.");
         
+        statistics._add("ordering.edges", num_edges(chordal_structure));
+        statistics._add("ordering.filledges", fill.size());
         if constexpr (debugChordalVargraph) {
             // Add the fill edges to the graph structure so that we can pass it to the drawing function
             for (auto const& pair : fill) {
@@ -125,11 +132,18 @@ namespace smtrat::cad::variable_ordering {
 
 
         std::vector<carl::Variable> res;
+        std::vector<carl::Variable> var_vector(std::move(varset.as_vector()));
 
         for (auto v : peo) {
             res.push_back(chordal_structure[v].var);
         }
+
         SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Sorted: " << res);
+        // Check that the new variable ordering is indeed a permutation of the polynomial set
+        // determined before re-ordering
+        // if not, this will impact the correctness of our result, so we abort
+        SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Originale: " << var_vector);
+        assert(std::is_permutation(res.begin(), res.end(), var_vector.begin(), var_vector.end()));
         return res;
     }
 }

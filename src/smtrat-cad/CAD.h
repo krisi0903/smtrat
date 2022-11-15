@@ -4,6 +4,8 @@
 
 #include <carl-covering/carl-covering.h>
 
+#include "CADVOStatistics.h"
+
 #include "common.h"
 #include "projection/Projection.h"
 #include "lifting/LiftingTree.h"
@@ -15,9 +17,23 @@
 
 namespace smtrat {
 namespace cad {
-	
+	#ifdef SMTRAT_DEVOPTION_Statistics
+	class CADVOStatistics;
+	#endif
 	template<typename Settings>
 	class CAD {
+		#ifdef SMTRAT_DEVOPTION_Statistics
+
+		/**
+		 * @brief The statistics object has to collect some information that is only available
+		 * by accessing private members of the CAD
+		 * 
+		 * Members accessed currently via friend:
+		 * None
+		 * 
+		 */
+		friend CADVOStatistics;
+		#endif
 	public:
 		template<CoreHeuristic CH>
 		friend struct CADCore;
@@ -98,7 +114,16 @@ namespace cad {
 		}
 
 		void reset(const std::vector<Poly>& polys) {
-			reset(Settings::variableOrdering(polys));
+			SMTRAT_STATISTICS_INIT(CADVOStatistics, statistics, "CADVOStatistics");
+			#ifdef SMTRAT_DEVOPTION_Statistics
+			auto start = carl::statistics::timing::now();
+			#endif
+			std::vector<carl::Variable> varsOrdered = Settings::variableOrdering(polys);
+			#ifdef SMTRAT_DEVOPTION_Statistics
+			auto variableOrderingTime = carl::statistics::timing::since(start).count();
+			statistics._add("variableOrderingTime", variableOrderingTime);
+			#endif
+			reset(varsOrdered);
 		}
 
 		void addConstraint(const ConstraintT& c) {

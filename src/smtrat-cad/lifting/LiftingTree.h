@@ -12,8 +12,24 @@
 
 namespace smtrat {
 namespace cad {
+	#ifdef SMTRAT_DEVOPTION_Statistics
+	class CADVOStatistics;
+	#endif
+
 	template<typename Settings>
 	class LiftingTree {
+		#ifdef SMTRAT_DEVOPTION_Statistics
+
+		/**
+		 * @brief The CADVOStatistics collects information about the number of (full-dimensional) sample points.
+		 * Accessing the private member is just the most straightforward way to do this
+		 * 
+		 * Members accessed by the friend class:
+		 * @p mCheckingQueue To get the size of the queue
+		 * 
+		 */
+		friend CADVOStatistics;
+		#endif
 	public:
 		using Tree = carl::tree<Sample>;
 		using Iterator = Tree::iterator;
