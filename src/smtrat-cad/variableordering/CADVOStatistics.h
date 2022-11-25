@@ -11,18 +11,14 @@
  * @version 2022-11-15
  * Created on 2022-11-15.
  */
-
 #pragma once
-
 #include <smtrat-common/smtrat-common.h>
 #ifdef SMTRAT_DEVOPTION_Statistics
 #include <smtrat-common/statistics/Statistics.h>
 #include <smtrat-cad/lifting/LiftingTree.h>
 #include <smtrat-cad/projection/BaseProjection.h>
 
-namespace smtrat
-{
-namespace cad
+namespace smtrat::cad::variable_ordering
 {
 	class CADVOStatistics : public Statistics {
 	private:
@@ -84,7 +80,8 @@ namespace cad
             */
         }
 	};
-}
+
+    extern CADVOStatistics& cadVOStatistics;
 }
 
 #endif

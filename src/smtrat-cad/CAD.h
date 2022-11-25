@@ -4,7 +4,7 @@
 
 #include <carl-covering/carl-covering.h>
 
-#include "CADVOStatistics.h"
+
 
 #include "common.h"
 #include "projection/Projection.h"
@@ -14,6 +14,8 @@
 #include "utils/ConflictGraph.h"
 #include "utils/MISGeneration.h"
 #include "debug/TikzHistoryPrinter.h"
+#include "variableordering/variableordering.h"
+#include "variableordering/CADVOStatistics.h"
 
 namespace smtrat {
 namespace cad {
@@ -114,14 +116,13 @@ namespace cad {
 		}
 
 		void reset(const std::vector<Poly>& polys) {
-			SMTRAT_STATISTICS_INIT(CADVOStatistics, statistics, "CADVOStatistics");
 			#ifdef SMTRAT_DEVOPTION_Statistics
 			auto start = carl::statistics::timing::now();
 			#endif
 			std::vector<carl::Variable> varsOrdered = Settings::variableOrdering(polys);
 			#ifdef SMTRAT_DEVOPTION_Statistics
 			auto variableOrderingTime = carl::statistics::timing::since(start).count();
-			statistics._add("variableOrderingTime", variableOrderingTime);
+			variable_ordering::cadVOStatistics._add("variableOrderingTime", variableOrderingTime);
 			#endif
 			reset(varsOrdered);
 		}

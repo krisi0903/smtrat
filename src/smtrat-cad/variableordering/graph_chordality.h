@@ -1,5 +1,6 @@
-#include <boost/graph/graph_traits.hpp>
-#include <boost/graph/adjacency_list.hpp>
+#pragma once
+#include "graph_common.h"
+#include "induced_subgraph.h"
 #include <boost/graph/filtered_graph.hpp>
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/properties.hpp>
@@ -10,43 +11,6 @@
 #include <algorithm>
 
 namespace smtrat::cad::variable_ordering {
-
-    /* We introduce some type aliases for commonly used graph elements
-     * since the boost types just get too long for comfortable use */
-    template <typename Graph>
-    using Edge = typename boost::graph_traits<Graph>::edge_descriptor;
-
-    template <typename Graph>
-    using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
-
-    template <typename Graph>
-    using EdgeIterator = typename boost::graph_traits<Graph>::edge_iterator;
-    
-    template <typename Graph>
-    using VertexIterator = typename boost::graph_traits<Graph>::vertex_iterator;    
-    
-    // Computes the MCS-M Algorithm on the input graph
-    // This computes a minimal chordal completion and the according perfect elimination ordering
-    // (a minimal elimination ordering for the input graph)
-    // Note that the input graph is modified during the procedure to add the fill edges
-    // Currently, we pass by-value since we modify the graph
-    
-        // Auxiliary filter for filtering a graph for edges
-    // keeps only edges where both vertices are kept by VertexFilterPredicate
-    template <typename VertexFilterPredicate, typename Graph>
-    class keep_unfiltered {
-        VertexFilterPredicate* pred;
-        Graph* g;
-        public:
-        keep_unfiltered() {}
-        keep_unfiltered(VertexFilterPredicate* pred, Graph* g) : pred(pred), g(g){}
-
-        bool operator()(Edge<Graph> const & e) const{
-            return (*pred)(boost::source(e, *g)) && (*pred)(boost::target(e, *g));
-        }
-
-    };
-
     // A predicate to create a filtered graph that only has vertices
     // with a lower weight than a given number
     // This is elementary to the mcs algorithm
@@ -71,9 +35,40 @@ namespace smtrat::cad::variable_ordering {
         Vertex<Graph> target;
     };
 
-    // Type of a filtered graph filtered by vertex weights
+
+    // Implementation of the "Elimination Game" algorithm
+    // This is mostly for sanity-checking our algorithms to ensure that they return a perfect elimination ordering
     template <typename Graph>
-    using MCSFilteredGraph = typename boost::filtered_graph<Graph, keep_unfiltered<VertexWeightFilter<Graph>, Graph>, VertexWeightFilter<Graph>>;
+    std::list<std::pair<Vertex<Graph>, Vertex<Graph>>> elimination_game(Graph const& g, std::list<Vertex<Graph>> order) {
+        typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, Vertex<Graph>> EliminationGraph;
+        std::map<Vertex<Graph>, Vertex<EliminationGraph>> vmap;
+        std::list<std::pair<Vertex<Graph>, Vertex<Graph>>> fill;
+
+        EliminationGraph eg;
+        // meh
+        for (auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
+            vmap[*v] = boost::add_vertex(*v, eg);
+        }
+
+        for (auto [e, e_end] = boost::edges(g); e != e_end; e++) {
+            boost::add_edge(vmap[boost::source(*e, g)], vmap[boost::target(*e, g)], eg);
+        }
+
+        for(auto v_ : order) {
+            auto v = vmap[v_];
+            for (auto [a1, a1_end] = boost::adjacent_vertices(v, eg); a1 != a1_end; a1++) {
+                for (auto [a2, a2_end] = boost::adjacent_vertices(v, eg); a2 != a2_end; a2++) {
+                    if (*a1 != *a2 && !boost::edge(*a1, *a2, eg).second) {
+                        boost::add_edge(*a1, *a2, eg);
+                        fill.push_back(std::make_pair(eg[*a1], eg[*a2]));
+                    }
+                }
+            }
+            boost::clear_vertex(v, eg);
+            boost::remove_vertex(v, eg);
+        }
+        return fill;
+    }
 
     // Computes the MCS-M Algorithm on the input graph
     // This computes a minimal chordal completion and the according perfect elimination ordering
@@ -149,9 +144,8 @@ namespace smtrat::cad::variable_ordering {
                 // We keep all edges that still have a vertex on both ends
 
                 VertexWeightFilter<Graph> filter(&weights, weights[*u], *max, *u);
-                keep_unfiltered<VertexWeightFilter<Graph>, Graph> edgefilter(&filter, &g);
 
-                MCSFilteredGraph<Graph> filtered(g, edgefilter, filter);
+                auto filtered = induce(g, filter);
 
                 std::map<Vertex<Graph>, boost::default_color_type> bfs_colormap;
                 boost::associative_property_map<std::map<Vertex<Graph>, boost::default_color_type>> bfs_color_pmap(bfs_colormap);
