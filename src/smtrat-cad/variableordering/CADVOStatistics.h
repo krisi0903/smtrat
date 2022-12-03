@@ -13,6 +13,7 @@
  */
 #pragma once
 #include <smtrat-common/smtrat-common.h>
+#include <chrono>
 #ifdef SMTRAT_DEVOPTION_Statistics
 #include <smtrat-common/statistics/Statistics.h>
 #include <smtrat-cad/lifting/LiftingTree.h>
@@ -27,6 +28,8 @@ namespace smtrat::cad::variable_ordering
 		 * Used to generate a prefix for the collected per-run statistics.
 		 */
 		std::size_t mCurrentRun = 0;
+        std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> start_times;
+        typedef std::chrono::milliseconds timer_tick_interval;
 	public:
 		template <typename T>
 		void _add(std::string const& key, T&& value) {
@@ -44,6 +47,33 @@ namespace smtrat::cad::variable_ordering
 		void nextRun() {
 			mCurrentRun++;
 		}
+
+        void startTimer(std::string const& name) {
+            if (start_times.find(name) != start_times.end()) {
+                throw std::invalid_argument("A timer with that name is already running");
+            } else {
+                start_times[name] = std::chrono::high_resolution_clock::now();
+            }
+        }
+
+        void stopTimer(std::string const& name) {
+            auto start = start_times.find(name);
+            if (start == start_times.end()) {
+                throw std::invalid_argument("No timer with that name has been started");
+            } else {
+                this->_add(name, std::chrono::duration_cast<timer_tick_interval>(std::chrono::high_resolution_clock::now() - start->second).count());
+            }
+        }
+
+        void add(std::vector<carl::Variable> const& vo) {
+            std::stringstream ss;
+            bool first = true;
+            for (carl::Variable const& v : vo) {
+                if (!first) ss << " < ";
+                ss << v;
+            }
+            _add("ordering", ss.str());
+        }
 
         template <typename Settings>
         void collectLiftingInformation(smtrat::cad::LiftingTree<Settings> const& tree) {

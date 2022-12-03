@@ -142,7 +142,7 @@ namespace smtrat::cad::variable_ordering {
                 // that is either a direct edge or only has intermediary vertices with weight < w(u)
                 // step 1: create a "filtered graph" view that only contains v, u and vertices with lower weight than u
                 // We keep all edges that still have a vertex on both ends
-
+                
                 VertexWeightFilter<Graph> filter(&weights, weights[*u], *max, *u);
 
                 auto filtered = induce(g, filter);
@@ -153,6 +153,11 @@ namespace smtrat::cad::variable_ordering {
                 // step 2: do a breadth-first search starting from u
                 // the reachability_visituor will change the value of hasPath as soon as the vertex u is found
                 // starting from vertex v
+
+                // doing a breadth-first search here for every unnumbered vertex does not seem ideal
+                // since BFS has complexity O(|V|+|E|), and we have two loops that iterate over some
+                // part of the vertices, the best upper bound seems to b O(|V|^2*|E|) instead of the
+                // often cited O(|V|*|E|) for MCS-M
                 boost::breadth_first_search(filtered, *max, boost::color_map(bfs_color_pmap));
 
                 if (bfs_colormap[*u] == boost::default_color_type::black_color) {
@@ -175,5 +180,28 @@ namespace smtrat::cad::variable_ordering {
 
 
         return std::make_pair(peo, fill);
+    }
+
+    template <typename Graph>
+    std::list<Vertex<Graph>> mcs(Graph const& g) {
+        std::map<Vertex<Graph>, int> w;
+
+        std::list<Vertex<Graph>> res;
+        std::set<Vertex<Graph>> unnumbered;
+
+        for(auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
+            w[*v] = 0;
+            unnumbered.insert(*v);
+        }
+
+        for (uint8_t i = boost::num_vertices(g); i > 0; i--) {
+            Vertex<Graph> v = *std::max_element(unnumbered.begin(), unnumbered.end(), [&](auto _v1, auto _v2) { return w[_v1] < w[_v2];});
+            for (auto [u, u_end] = boost::adjacent_vertices(v, g); u != u_end; u++) {
+                if (unnumbered.count(*u) > 0) w[*u]++;
+            }
+            res.push_front(v);
+            unnumbered.erase(v);
+        }
+        return res;
     }
 }

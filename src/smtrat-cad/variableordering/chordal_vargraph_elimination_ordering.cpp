@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <filesystem>
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <filesystem>
@@ -32,26 +33,28 @@ namespace smtrat::cad::variable_ordering {
     // enables writing the graph with colored fill-in edges to a file
     constexpr bool debugChordalVargraph = true;
 
-
+    constexpr ChordalOrderingSettings settings = paper_settings;
 
 
     /*!
-     * A small utility function to print out the "chordal structure of the polynomial set" in a .doft
+     * A small utility function to print out the "chordal structure of the polynomial set" in a .dot
      * file for visualization and better debugging
      * a .dot file is automatically created in the current working directory
      */
     template <typename Graph>
-    void print_graphviz(Graph const& g) {
+    std::string print_graphviz(Graph const& g) {
+
+        std::filesystem::path basedir("/tmp/smtrat-debug-graphs");
         boost::posix_time::ptime current_time(boost::posix_time::second_clock::local_time());
         std::string current_time_s = boost::posix_time::to_iso_string(current_time);
-        std::string filename = "variable-graph-" + current_time_s + ".dot";
+        std::filesystem::path filename = basedir / ("variable-graph-" + current_time_s + ".dot");
 
         // If just the time does not work (when we are drawing multiple graphs in the same second)
         // we add an index and increment as long as the filename still exists
         if (std::filesystem::exists(filename)) {
             int i = 0;
             do {
-                filename = "variable-graph-" + current_time_s + "-" + std::to_string(++i) + ".dot";
+                filename = basedir / ("variable-graph-" + current_time_s + "-" + std::to_string(++i) + ".dot");
             } while(std::filesystem::exists(filename));
         }
         std::ofstream filestream(filename);
@@ -77,6 +80,7 @@ namespace smtrat::cad::variable_ordering {
         },
         boost::get(&VariableVertexProperties::id, g));
         filestream.close();
+        return filename;
     } 
 
     std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vector<Poly>& polys) {
@@ -87,6 +91,9 @@ namespace smtrat::cad::variable_ordering {
         std::map<carl::Variable, Vertex<ChordalStructure>> var_vertex_map;
         ChordalStructure chordal_structure;
 
+        #ifdef SMTRAT_DEVOPTION_Statistics
+        cadVOStatistics.startTimer("buildVariableGraph");
+        #endif
 
         // Counter for the ID number we assign to vertices
         // Our implementation of the MCS algorithm requires each vertex to have a unique index
@@ -114,39 +121,74 @@ namespace smtrat::cad::variable_ordering {
             }
         }
 
-       
+        #ifdef SMTRAT_DEVOPTION_Statistics
+        cadVOStatistics.stopTimer("buildVariableGraph");
+        cadVOStatistics.startTimer("tryBuildPEO");
+        #endif
 
-        auto [peo, fill] = mcs_m(chordal_structure);
-        SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Have " << num_vertices(chordal_structure) << " vertices with " << num_edges(chordal_structure) << " edges. " << fill.size() << " fill-in edges to make graph chordal with given PEO, a percentage of " <<  100 * (fill.size() / (double) num_edges(chordal_structure) + fill.size()) << "%'.");
-        
+        auto peo = mcs(chordal_structure);
+        auto fill = elimination_game(chordal_structure, peo);
+
+        #ifdef SMTRAT_DEVOPTION_Statistics
+        cadVOStatistics.stopTimer("tryBuildPEO");
+        #endif
+       
+        if(fill.size()) {
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.startTimer("buildMEO");
+            #endif
+            std::tie(peo, fill) = mcs_m(chordal_structure);
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.stopTimer("buildMEO");
+            #endif
+            SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Have " << num_vertices(chordal_structure) << " vertices with " << num_edges(chordal_structure) << " edges. " << fill.size() << " fill-in edges to make graph chordal with given PEO, a percentage of " <<  100 * (fill.size() / (double) num_edges(chordal_structure) + fill.size()) << "%'.");
+
+        } else {
+            // if the graph is chordal, we can compute the minimum height etree
+            // and possibly get a better ordering
+            SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Graph was chordal - computing shortest e-tree");
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.startTimer("buildETree");
+            #endif
+            EliminationTree<ChordalStructure> t = min_height_etree(chordal_structure);
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.stopTimer("buildETree");
+            
+            if constexpr (debugChordalVargraph) {
+                cadVOStatistics._add("ordering.etree.graph_dot", print_graphviz_etree<ChordalStructure>(t));
+            }
+            #endif
+
+
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.startTimer("buildETreePEO");
+            #endif
+            peo = peo_from_etree(t);
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.stopTimer("buildETreePEO");
+            cadVOStatistics._add("ordering.etree.height", t[boost::graph_bundle].height);
+            #endif
+        }
+
+                
         #ifdef SMTRAT_DEVOPTION_Statistics
         cadVOStatistics._add("ordering.vertices", boost::num_vertices(chordal_structure));
         cadVOStatistics._add("ordering.edges", num_edges(chordal_structure));
         cadVOStatistics._add("ordering.filledges", fill.size());
-        #endif
         if constexpr (debugChordalVargraph) {
             // Add the fill edges to the graph structure so that we can pass it to the drawing function
             for (auto const& pair : fill) {
                 add_edge(pair.first, pair.second, {.poly = nullptr, .fillEdge = true}, chordal_structure);
             }
 
-            print_graphviz<ChordalStructure>(chordal_structure);
+            
+            cadVOStatistics._add("ordering.graph_dot", print_graphviz<ChordalStructure>(chordal_structure));
         }
+        #endif
+        
 
         
-        // if the graph is chordal, we can compute the minimum height etree
-        // and possibly get a better ordering
-        if(!fill.size()) {
-            SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Graph was chordal - computing shortest e-tree");
-            EliminationTree<ChordalStructure> t = min_height_etree(chordal_structure);
-            if constexpr (debugChordalVargraph) {
-                print_graphviz_etree<ChordalStructure>(t);
-            }
-            peo = peo_from_etree(t);
-            #ifdef SMTRAT_DEVOPTION_Statistics
-            cadVOStatistics._add("ordering.etree.height", t[boost::graph_bundle].height);
-            #endif
-        }
+        
 
         assert(elimination_game(chordal_structure, peo).size() == 0);
 

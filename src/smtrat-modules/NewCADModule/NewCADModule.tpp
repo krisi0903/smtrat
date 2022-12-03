@@ -113,13 +113,13 @@ namespace smtrat
 		}
 		SMTRAT_LOG_DEBUG("smtrat.cad", "Performing actual check");
 		#ifdef SMTRAT_DEVOPTION_Statistics
-		auto checkStart = carl::statistics::timing::now();
+		cad::variable_ordering::cadVOStatistics.startTimer("cad.time");
 		#endif
 
 		auto answer = mCAD.check(mLastAssignment, mInfeasibleSubsets);
 #ifdef SMTRAT_DEVOPTION_Statistics
 		mStatistics.currentProjectionSize(mCAD.getProjection().size());
-		cad::variable_ordering::cadVOStatistics._add("cad.time", carl::statistics::timing::since(checkStart).count());
+		cad::variable_ordering::cadVOStatistics.stopTimer("cad.time");
 
 		cad::variable_ordering::cadVOStatistics.collectLiftingInformation<Settings>(mCAD.getLifting());
 		cad::variable_ordering::cadVOStatistics.collectProjectionInformation<Settings>(mCAD.getProjection());
@@ -154,8 +154,8 @@ namespace smtrat
 				}
 			}
 		}
-		#ifdef SMTRAT_DEVOPTION_STATISTICS
-		mStatistics.nextRun();
+		#ifdef SMTRAT_DEVOPTION_Statistics
+		cad::variable_ordering::cadVOStatistics.nextRun();
 		#endif
 		return answer;
 	}

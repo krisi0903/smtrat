@@ -2,6 +2,7 @@
 
 #include <carl-arith/ran/ran.h>
 #include <smtrat-cad/variableordering/variableordering.h>
+#include <smtrat-cad/variableordering/triangular_ordering.h>
 
 namespace smtrat {
 namespace cad {

@@ -1,6 +1,7 @@
 #pragma once
 #include "graph_common.h"
 #include "induced_subgraph.h"
+#include <filesystem>
 
 namespace smtrat::cad::variable_ordering {
     template <typename Graph>
@@ -25,17 +26,19 @@ namespace smtrat::cad::variable_ordering {
      * a .dot file is automatically created in the current working directory
      */
     template <typename Graph>
-    void print_graphviz_etree(EliminationTree<Graph> const& g) {
+    std::string print_graphviz_etree(EliminationTree<Graph> const& g) {
+        std::filesystem::path basedir("/tmp/smtrat-debug-graphs");
+        std::filesystem::create_directories(basedir);
         boost::posix_time::ptime current_time(boost::posix_time::second_clock::local_time());
         std::string current_time_s = boost::posix_time::to_iso_string(current_time);
-        std::string filename = "variable-graph-etree-" + current_time_s + ".dot";
+        std::filesystem::path filename = basedir / ("variable-graph-etree-" + current_time_s + ".dot");
         
         // If just the time does not work (when we are drawing multiple graphs in the same second)
         // we add an index and increment as long as the filename still exists
         if (std::filesystem::exists(filename)) {
             int i = 0;
             do {
-                filename = "variable-graph-etree" + current_time_s + "-" + std::to_string(++i) + ".dot";
+                filename = basedir / ("variable-graph-etree" + current_time_s + "-" + std::to_string(++i) + ".dot");
             } while(std::filesystem::exists(filename));
         }
         std::ofstream filestream(filename);
@@ -77,6 +80,7 @@ namespace smtrat::cad::variable_ordering {
         }
         filestream << "}\n";
         filestream.close();
+        return filename;
     } 
 
 

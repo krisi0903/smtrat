@@ -117,12 +117,12 @@ namespace cad {
 
 		void reset(const std::vector<Poly>& polys) {
 			#ifdef SMTRAT_DEVOPTION_Statistics
-			auto start = carl::statistics::timing::now();
+			variable_ordering::cadVOStatistics.startTimer("variableOrderingTotalTime");
 			#endif
 			std::vector<carl::Variable> varsOrdered = Settings::variableOrdering(polys);
 			#ifdef SMTRAT_DEVOPTION_Statistics
-			auto variableOrderingTime = carl::statistics::timing::since(start).count();
-			variable_ordering::cadVOStatistics._add("variableOrderingTime", variableOrderingTime);
+			variable_ordering::cadVOStatistics.stopTimer("variableOrderingTotalTime");
+			variable_ordering::cadVOStatistics.add(varsOrdered);
 			#endif
 			reset(varsOrdered);
 		}
