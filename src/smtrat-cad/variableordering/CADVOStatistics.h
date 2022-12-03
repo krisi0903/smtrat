@@ -71,6 +71,7 @@ namespace smtrat::cad::variable_ordering
             for (carl::Variable const& v : vo) {
                 if (!first) ss << " < ";
                 ss << v;
+                first = false;
             }
             _add("ordering", ss.str());
         }
