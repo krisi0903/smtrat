@@ -13,6 +13,7 @@
 #include <smtrat-cad/variableordering/pseudorandom_ordering.h>
 #include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
 #include <smtrat-cad/variableordering/variableordering.h>
+#include <smtrat-cad/variableordering/brown_ordering.h>
 
 namespace smtrat {
 namespace cad {
@@ -146,9 +147,19 @@ namespace cad {
 
 	struct NewCADSettingsChordal: NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADChordal>";
-		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsBase>;
 	};
 
+	struct NewCADSettingsBrownOrdering : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADBrownOrdering>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::brown_ordering;
+	};
+
+	
+	struct NewCADSettingsChordalWithTriangularSecondary : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangularETree>>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangularETree>;
+	};
 	//
 	// Settings to test different projection operators
 	//

@@ -28,14 +28,6 @@ namespace smtrat::cad::variable_ordering {
         return os;
     }
 
-    
-    // a little hack because I do not know where to put this setting
-    // enables writing the graph with colored fill-in edges to a file
-    constexpr bool debugChordalVargraph = true;
-
-    constexpr ChordalOrderingSettings settings = paper_settings;
-
-
     /*!
      * A small utility function to print out the "chordal structure of the polynomial set" in a .dot
      * file for visualization and better debugging
@@ -83,6 +75,7 @@ namespace smtrat::cad::variable_ordering {
         return filename;
     } 
 
+    template <typename Settings>
     std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vector<Poly>& polys) {
         SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Building order based on " << polys);
 
@@ -138,6 +131,10 @@ namespace smtrat::cad::variable_ordering {
             cadVOStatistics.startTimer("buildMEO");
             #endif
             std::tie(peo, fill) = mcs_m(chordal_structure);
+            // Add the fill edges to the graph structure so that we can pass it to the drawing function
+            for (auto const& pair : fill) {
+                add_edge(pair.first, pair.second, {.poly = nullptr, .fillEdge = true}, chordal_structure);
+            }
             #ifdef SMTRAT_DEVOPTION_Statistics
             cadVOStatistics.stopTimer("buildMEO");
             #endif
@@ -163,7 +160,42 @@ namespace smtrat::cad::variable_ordering {
             #ifdef SMTRAT_DEVOPTION_Statistics
             cadVOStatistics.startTimer("buildETreePEO");
             #endif
-            peo = peo_from_etree(t);
+
+            // Now, given the elimination tree, we have to build a PEO from it
+            // Any order in which the vertices are ordered ascending by level is a perfect elimination ordering
+            // This gives us a bit of freedom, so we can specify a secondary ordering as secondary_ordering
+            // to serve as a tie-breaker for nodes within a level
+
+
+            std::map<Vertex<ChordalStructure>, int> etree_level;
+
+            for(auto [v, v_end] = boost::vertices(t); v != v_end; v++) {
+                etree_level[t[*v].v] = t[*v].class_label;
+            }
+
+            if constexpr (Settings::etree_secondary_ordering != nullptr) {
+                // The secondary ordering should be a VariableOrdering, that is, a function taking a polyset and
+                // returning a sorted array on the variables.
+                // This is somewhat non-ideal, since we need a < relation instead.
+                // The resulting container has a fixed order, so the relation is implicit (lower indices are smaller)
+                // To access this order in a somewhat efficient way, we store the indices once in a map
+                std::vector<carl::Variable> secondary = Settings::etree_secondary_ordering(polys);
+                std::map<Vertex<ChordalStructure>, int> secondary_idx;
+                for (int i = 0; i < secondary.size(); i++) {
+                    secondary_idx[var_vertex_map[secondary[i]]] = i;
+                }
+
+                // Sort by E-Tree level first, then the secondary ordering as tie-breaker
+                peo.sort([&](auto v1, auto v2) {
+                    return etree_level[v1] < etree_level[v2] || (etree_level[v1] == etree_level[v2] && secondary_idx[v1] < secondary_idx[v2]);
+                });
+            } else {
+                // If no secondary order is specified, only sort by E-Tree level.
+                peo.sort([&](auto v1, auto v2) {
+                return etree_level[v1] < etree_level[v2] || (etree_level[v1] == etree_level[v2] && stable_var_comp(chordal_structure[v1].var, chordal_structure[v2].var));
+            });
+            }
+            
             #ifdef SMTRAT_DEVOPTION_Statistics
             cadVOStatistics.stopTimer("buildETreePEO");
             cadVOStatistics._add("ordering.etree.height", t[boost::graph_bundle].height);
@@ -176,18 +208,9 @@ namespace smtrat::cad::variable_ordering {
         cadVOStatistics._add("ordering.edges", num_edges(chordal_structure));
         cadVOStatistics._add("ordering.filledges", fill.size());
         if constexpr (debugChordalVargraph) {
-            // Add the fill edges to the graph structure so that we can pass it to the drawing function
-            for (auto const& pair : fill) {
-                add_edge(pair.first, pair.second, {.poly = nullptr, .fillEdge = true}, chordal_structure);
-            }
-
-            
             cadVOStatistics._add("ordering.graph_dot", print_graphviz<ChordalStructure>(chordal_structure));
         }
         #endif
-        
-
-        
         
 
         assert(elimination_game(chordal_structure, peo).size() == 0);
@@ -207,4 +230,9 @@ namespace smtrat::cad::variable_ordering {
         assert(std::is_permutation(res.begin(), res.end(), var_vector.begin(), var_vector.end()));
         return res;
     }
+
+    template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsBase>(const std::vector<Poly>& polys);
+    template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsTriangularETree>(const std::vector<Poly>& polys);
+    
 }
+

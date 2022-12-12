@@ -1,26 +1,9 @@
 #include "triangular_ordering.h"
-
+#include "variableordering.h"
 #include <algorithm>
 #include <numeric>
 
 namespace smtrat::cad::variable_ordering {
-
-template<typename T>
-class VariableMap {
-private:
-	std::vector<T> mData;
-public:
-	T operator[](carl::Variable v) const {
-		assert(v != carl::Variable::NO_VARIABLE);
-		if (mData.size() <= v.id() - 1) return 0;
-		return mData[v.id() - 1];
-	}
-	T& operator[](carl::Variable v) {
-		assert(v != carl::Variable::NO_VARIABLE);
-		if (mData.size() <= v.id() - 1) mData.resize(v.id());
-		return mData[v.id() - 1];
-	}
-};
 
 struct triangular_data {
 	VariableMap<std::size_t> max_deg;
@@ -34,7 +17,7 @@ struct triangular_data {
 		if (max_tdeg[lhs] != max_tdeg[rhs]) return max_tdeg[lhs] < max_tdeg[rhs];
 		SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Comparing degsum " << lhs << " < " << rhs << "? " << sum_deg[lhs] << " > " << sum_deg[rhs]);
 		if (sum_deg[lhs] != sum_deg[rhs]) return sum_deg[lhs] < sum_deg[rhs];
-		return false;
+		return stable_var_comp(lhs, rhs);
 	}
 };
 

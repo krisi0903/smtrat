@@ -12,6 +12,7 @@
 #include <smtrat-cad/variableordering/chordal_vargraph_elimination_ordering.h>
 #include <smtrat-cad/variableordering/variableordering.h>
 #include <smtrat-cad/variableordering/CADVOStatistics.h>
+#include <smtrat-cad/variableordering/CADVOStatisticsAnalyze.h>
 namespace smtrat
 {
 	template<class Settings>
@@ -121,8 +122,8 @@ namespace smtrat
 		mStatistics.currentProjectionSize(mCAD.getProjection().size());
 		cad::variable_ordering::cadVOStatistics.stopTimer("cad.time");
 
-		cad::variable_ordering::cadVOStatistics.collectLiftingInformation<Settings>(mCAD.getLifting());
-		cad::variable_ordering::cadVOStatistics.collectProjectionInformation<Settings>(mCAD.getProjection());
+		cad::variable_ordering::cadVOStatistics.collectLiftingInformation<Settings>(mCAD);
+		cad::variable_ordering::cadVOStatistics.collectProjectionInformation<Settings>(mCAD);
 #endif
 		if (answer == Answer::UNSAT) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Found to be unsat");

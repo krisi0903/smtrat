@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <smtrat-solver/Manager.h>

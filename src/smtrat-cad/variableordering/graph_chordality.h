@@ -70,16 +70,18 @@ namespace smtrat::cad::variable_ordering {
         return fill;
     }
 
+
+
     // Computes the MCS-M Algorithm on the input graph
     // This computes a minimal chordal completion and the according perfect elimination ordering
     // (a minimal elimination ordering for the input graph)
     // Note that the input graph is modified during the procedure to add the fill edges
     // Currently, we pass by-value since we modify the graph
     
-    template <typename Graph>
+    template <typename Graph, typename Compare>
     std::pair<std::list<Vertex<Graph>>,
               std::list<std::pair<Vertex<Graph>, Vertex<Graph>>>> 
-    mcs_m(Graph const& chordalStructure) {
+    mcs_m(Graph const& chordalStructure, Compare comp) {
 
         // Copy the graph so we can remove vertices from it
         Graph g = chordalStructure;
@@ -97,7 +99,7 @@ namespace smtrat::cad::variable_ordering {
         }
         
 
-        SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Graph vertex count: " << n) 
+        SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Graph vertex count: " << n) 
 
         // Each vertex requires a weight for the algorithm
         std::map<Vertex<Graph>, unsigned int> weights;
@@ -117,14 +119,11 @@ namespace smtrat::cad::variable_ordering {
             VertexIterator<Graph> start = vertices(g).first;
             VertexIterator<Graph> end = vertices(g).second;
 
-            VertexIterator<Graph> max = start;
-            for(auto iter = start; iter != end; iter++) {
-                if (weights[*iter] > weights[*max]) {
-                    max = iter;
-                }
-            }
+            VertexIterator<Graph> max = std::max_element(vertices(g).first, vertices(g).second, [&](Vertex<Graph> const& v1, Vertex<Graph> const& v2) {
+                return weights[v1] < weights[v2] || (weights[v1] == weights[v2] && !comp(v1, v2));
+            });
             
-            SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Max vertex is " << g[*max]);
+            SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Max vertex is " << g[*max]);
 
             /* A set that contains all vertices u
              * that are reachable from max over a path where
@@ -182,8 +181,16 @@ namespace smtrat::cad::variable_ordering {
         return std::make_pair(peo, fill);
     }
 
+    
     template <typename Graph>
-    std::list<Vertex<Graph>> mcs(Graph const& g) {
+    std::pair<std::list<Vertex<Graph>>,
+              std::list<std::pair<Vertex<Graph>, Vertex<Graph>>>> 
+    mcs_m(Graph const& chordalStructure) {
+        return mcs_m(chordalStructure, std::less<Vertex<Graph>>{});
+    }
+
+    template <typename Graph, typename Compare>
+    std::list<Vertex<Graph>> mcs(Graph const& g, Compare comp) {
         std::map<Vertex<Graph>, int> w;
 
         std::list<Vertex<Graph>> res;
@@ -195,7 +202,9 @@ namespace smtrat::cad::variable_ordering {
         }
 
         for (uint8_t i = boost::num_vertices(g); i > 0; i--) {
-            Vertex<Graph> v = *std::max_element(unnumbered.begin(), unnumbered.end(), [&](auto _v1, auto _v2) { return w[_v1] < w[_v2];});
+            Vertex<Graph> v = *std::max_element(unnumbered.begin(), unnumbered.end(), [&](auto _v1, auto _v2) { 
+                return w[_v1] < w[_v2] || w[_v1] == w[_v2] && !comp(_v1, _v2);
+            });
             for (auto [u, u_end] = boost::adjacent_vertices(v, g); u != u_end; u++) {
                 if (unnumbered.count(*u) > 0) w[*u]++;
             }
@@ -203,5 +212,10 @@ namespace smtrat::cad::variable_ordering {
             unnumbered.erase(v);
         }
         return res;
+    }
+
+    template <typename Graph>
+    std::list<Vertex<Graph>> mcs(Graph const& g) {
+        return mcs(g, std::less<Vertex<Graph>>{});
     }
 }

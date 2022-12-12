@@ -13,14 +13,20 @@
  */
 #pragma once
 #include <smtrat-common/smtrat-common.h>
-#include <chrono>
+
 #ifdef SMTRAT_DEVOPTION_Statistics
+#include <chrono>
 #include <smtrat-common/statistics/Statistics.h>
 #include <smtrat-cad/lifting/LiftingTree.h>
 #include <smtrat-cad/projection/BaseProjection.h>
 
+namespace smtrat::cad {
+    template <typename Settings>
+    class CAD;
+}
 namespace smtrat::cad::variable_ordering
 {
+
 	class CADVOStatistics : public Statistics {
 	private:
 		/**
@@ -35,6 +41,7 @@ namespace smtrat::cad::variable_ordering
 		void _add(std::string const& key, T&& value) {
 			std::stringstream fullyQualifiedKey;
 			fullyQualifiedKey << mCurrentRun << ":" << key;
+            SMTRAT_LOG_DEBUG("CADVOStatistics", "CADVOStatistics storing " << fullyQualifiedKey.str() << ":" << value);
 			addKeyValuePair(fullyQualifiedKey.str(), value);
 		}
 
@@ -69,47 +76,18 @@ namespace smtrat::cad::variable_ordering
             std::stringstream ss;
             bool first = true;
             for (carl::Variable const& v : vo) {
-                if (!first) ss << " < ";
+                if (!first) ss << ",";
                 ss << v;
                 first = false;
             }
-            _add("ordering", ss.str());
+            this->_add("ordering", ss.str());
         }
 
         template <typename Settings>
-        void collectLiftingInformation(smtrat::cad::LiftingTree<Settings> const& tree) {
-            size_t size = 0;
-            for (auto iter = tree.mCheckingQueue.begin(); iter != tree.mCheckingQueue.end(); iter++) size++;
-            _add("liftingPoints", size);
-        }
+        void collectLiftingInformation(smtrat::cad::CAD<Settings> const& cad);
 
         template <typename Settings>
-        void collectProjectionInformation(smtrat::cad::BaseProjection<Settings> const& proj) {
- 
-            for (std::size_t level = 1; level <= proj.dim(); ++level) {
-                std::stringstream key;
-                key << "projection." << level << ".size";
-                this->_add(key.str(), proj.size(level));
-            }
-            /*
-            std::size_t sum = 0;
-            DegreeCollector dc;
-            for (std::size_t level = 1; level <= projection.mProjection.dim(); ++level) {
-                sum += proj.size(level);
-                for (std::size_t pid = 0; pid < projection.mProjection.size(level); ++pid) {
-                    if (projection.mProjection.hasPolynomialById(level, pid)) {
-                        const auto& p = projection.mProjection.getPolynomialById(level, pid);
-                        dc(p);
-                    }
-                }
-            }
-            stats.add(prefix + "_size", sum);
-            stats.add(prefix + "_deg_max", dc.degree_max);
-            stats.add(prefix + "_deg_sum", dc.degree_sum);
-            stats.add(prefix + "_tdeg_max", dc.tdegree_max);
-            stats.add(prefix + "_tdeg_sum", dc.tdegree_sum);
-            */
-        }
+        void collectProjectionInformation(smtrat::cad::CAD<Settings> const& cad);
 	};
 
     extern CADVOStatistics& cadVOStatistics;
