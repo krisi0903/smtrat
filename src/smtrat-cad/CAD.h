@@ -122,7 +122,6 @@ namespace cad {
 			std::vector<carl::Variable> varsOrdered = Settings::variableOrdering(polys);
 			#ifdef SMTRAT_DEVOPTION_Statistics
 			variable_ordering::cadVOStatistics.stopTimer("variableOrderingTotalTime");
-			variable_ordering::cadVOStatistics.add(varsOrdered);
 			#endif
 			SMTRAT_LOG_INFO("smtrat.cad", "Reset variable ordering: " << varsOrdered);
 			reset(varsOrdered);

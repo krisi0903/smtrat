@@ -29,12 +29,15 @@ std::vector<carl::Variable> brown_ordering(const std::vector<Poly>& polys) {
 	brown_data data;
 
 	for (std::size_t i = 0; i < polys.size(); ++i) {
-		for (auto const& term : polys[i].terms()) {
-			auto monomial = term.monomial();
-			for (auto var : carl::variables(*monomial)) {
-				data.term_count[var]++;
-				data.max_term_tdeg[var] = std::max(data.max_term_tdeg[var], monomial->tdeg());
+		for (Poly::TermType const& term : polys[i].terms()) {
+			std::shared_ptr<const carl::Monomial> monomial = term.monomial();
+			if (monomial != nullptr) {
+				for (auto var : carl::variables(*monomial)) {
+					data.term_count[var]++;
+					data.max_term_tdeg[var] = std::max(data.max_term_tdeg[var], monomial->tdeg());
+				}
 			}
+			
 		}
 		carl::variables(polys[i], vars);
 		for (auto var: carl::variables(polys[i])) { 

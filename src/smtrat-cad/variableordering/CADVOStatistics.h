@@ -16,6 +16,7 @@
 
 #ifdef SMTRAT_DEVOPTION_Statistics
 #include <chrono>
+#include <format>
 #include <smtrat-common/statistics/Statistics.h>
 #include <smtrat-cad/lifting/LiftingTree.h>
 #include <smtrat-cad/projection/BaseProjection.h>
@@ -36,12 +37,14 @@ namespace smtrat::cad::variable_ordering
 		std::size_t mCurrentRun = 0;
         std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> start_times;
         typedef std::chrono::milliseconds timer_tick_interval;
+
+        inline std::string statFullName(std::string const& name) {
+            return std::format("{}:{}", mCurrentRun, name);
+        }
 	public:
 		template <typename T>
 		void _add(std::string const& key, T&& value) {
-			std::stringstream fullyQualifiedKey;
-			fullyQualifiedKey << mCurrentRun << ":" << key;
-            SMTRAT_LOG_DEBUG("CADVOStatistics", "CADVOStatistics storing " << fullyQualifiedKey.str() << ":" << value);
+            SMTRAT_LOG_DEBUG("CADVOStatistics", "CADVOStatistics storing " << statFullName(key) << ":" << value);
 			addKeyValuePair(fullyQualifiedKey.str(), value);
 		}
 
@@ -55,7 +58,8 @@ namespace smtrat::cad::variable_ordering
 			mCurrentRun++;
 		}
 
-        void startTimer(std::string const& name) {
+        void startTimer(std::string const& _name) {
+            std::string name = statFullName(_name);
             if (start_times.find(name) != start_times.end()) {
                 throw std::invalid_argument("A timer with that name is already running");
             } else {
@@ -63,12 +67,13 @@ namespace smtrat::cad::variable_ordering
             }
         }
 
-        void stopTimer(std::string const& name) {
+        void stopTimer(std::string const& _name) {
+            std::string name = statFullName(_name);
             auto start = start_times.find(name);
             if (start == start_times.end()) {
                 throw std::invalid_argument("No timer with that name has been started");
             } else {
-                this->_add(name, std::chrono::duration_cast<timer_tick_interval>(std::chrono::high_resolution_clock::now() - start->second).count());
+                this->addKeyValuePair(name, std::chrono::duration_cast<timer_tick_interval>(std::chrono::high_resolution_clock::now() - start->second).count());
             }
         }
 
