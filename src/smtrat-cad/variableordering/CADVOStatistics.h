@@ -16,7 +16,6 @@
 
 #ifdef SMTRAT_DEVOPTION_Statistics
 #include <chrono>
-#include <format>
 #include <smtrat-common/statistics/Statistics.h>
 #include <smtrat-cad/lifting/LiftingTree.h>
 #include <smtrat-cad/projection/BaseProjection.h>
@@ -39,7 +38,7 @@ namespace smtrat::cad::variable_ordering
         typedef std::chrono::milliseconds timer_tick_interval;
 
         inline std::string statFullName(std::string const& name) {
-            return std::format("{}:{}", mCurrentRun, name);
+            return (std::stringstream() << mCurrentRun << ':' << name).str()
         }
 	public:
 		template <typename T>

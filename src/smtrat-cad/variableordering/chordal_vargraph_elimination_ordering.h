@@ -50,4 +50,7 @@ namespace smtrat::cad::variable_ordering {
     template<typename Settings>
     std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vector<Poly>& polys);
 
+
+    //std::vector<varl::Variable> weighted_etree(const std::vector<Poly>& polys);
+
 }
