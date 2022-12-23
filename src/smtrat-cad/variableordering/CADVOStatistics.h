@@ -38,13 +38,13 @@ namespace smtrat::cad::variable_ordering
         typedef std::chrono::milliseconds timer_tick_interval;
 
         inline std::string statFullName(std::string const& name) {
-            return (std::stringstream() << mCurrentRun << ':' << name).str()
+            return (std::stringstream() << mCurrentRun << ':' << name).str();
         }
 	public:
 		template <typename T>
 		void _add(std::string const& key, T&& value) {
             SMTRAT_LOG_DEBUG("CADVOStatistics", "CADVOStatistics storing " << statFullName(key) << ":" << value);
-			addKeyValuePair(fullyQualifiedKey.str(), value);
+			addKeyValuePair(statFullName(key), value);
 		}
 
         template <typename T>
