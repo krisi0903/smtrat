@@ -33,25 +33,50 @@ namespace smtrat::cad::variable_ordering {
     template <typename Settings>
     void CADVOStatistics::collectLiftingInformation(smtrat::cad::CAD<Settings> const& cad) {
         auto const& tree = cad.getLifting().getTree();
-        _add("fullDimSamples", std::distance(tree.begin_depth(cad.dim()), tree.end_depth()));
+        switch (CADVOStatistics::detail_level) {
+            case CADVOStatistics::DetailLevel::HIGH:
+            for (std::size_t level = 1; level <= cad.dim(); level++) {
+                _add((std::stringstream() << "samples." << level << ".size").str(), std::distance(tree.begin_depth(level), tree.end_depth()));
+            }
+            break;
+            case CADVOStatistics::DetailLevel::NORMAL:
+                _add((std::stringstream() << "samples.size").str(), std::distance(tree.begin(), tree.end()));
+        }
+        
+        
     }
 
     template <typename Settings>
     void CADVOStatistics::collectProjectionInformation(smtrat::cad::CAD<Settings> const& cad) {
+        
         auto const& proj = cad.getProjection();
+        DegreeCollector dc;
+
+        std::size_t sum = 0;
         for (std::size_t level = 1; level <= proj.dim(); ++level) {
-            DegreeCollector dc;
+            sum += proj.size(level);
             for (std::size_t pid = 0; pid < proj.size(level); ++pid) {
                 if (proj.hasPolynomialById(level, pid)) {
                     const auto& p = proj.getPolynomialById(level, pid);
                     dc(p);
                 }
             }
-            this->_add((std::stringstream() << "projection." << level << ".size").str(), proj.size(level));
-            this->_add((std::stringstream() << "projection." << level << ".deg_max").str(), dc.degree_max);
-            this->_add((std::stringstream() << "projection." << level << ".deg_sum").str(), dc.degree_sum);
-            this->_add((std::stringstream() << "projection." << level << ".tdeg_max").str(), dc.tdegree_max);
-            this->_add((std::stringstream() << "projection." << level << ".tdeg_sum").str(), dc.tdegree_sum);
+            if constexpr (CADVOStatistics::detail_level >= CADVOStatistics::DetailLevel::HIGH) {
+                this->_add((std::stringstream() << "projection." << level << ".size").str(), proj.size(level));
+                this->_add((std::stringstream() << "projection." << level << ".deg_max").str(), dc.degree_max);
+                this->_add((std::stringstream() << "projection." << level << ".deg_sum").str(), dc.degree_sum);
+                this->_add((std::stringstream() << "projection." << level << ".tdeg_max").str(), dc.tdegree_max);
+                this->_add((std::stringstream() << "projection." << level << ".tdeg_sum").str(), dc.tdegree_sum);
+                dc = {};
+            }
+        }
+
+        if constexpr (CADVOStatistics::detail_level <= CADVOStatistics::DetailLevel::NORMAL) {
+            this->_add("projection.size", sum);
+            this->_add("projection.deg_max", dc.degree_max);
+            this->_add("projection.deg_sum", dc.degree_sum);
+            this->_add("projection.tdeg_max", dc.tdegree_max);
+            this->_add("projection.tdeg_sum", dc.tdegree_sum);
         }
     }
 }

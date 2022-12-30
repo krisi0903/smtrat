@@ -1,6 +1,7 @@
 #pragma once
 #include "graph_common.h"
 #include "induced_subgraph.h"
+#include "CADVOStatistics.h"
 #include <boost/graph/filtered_graph.hpp>
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/properties.hpp>
@@ -122,7 +123,11 @@ namespace smtrat::cad::variable_ordering {
             VertexIterator<Graph> max = std::max_element(vertices(g).first, vertices(g).second, [&](Vertex<Graph> const& v1, Vertex<Graph> const& v2) {
                 return weights[v1] < weights[v2] || (weights[v1] == weights[v2] && !comp(v1, v2));
             });
-            
+
+            #ifdef SMTRAT_DEVOPTION_Statistics
+            cadVOStatistics.recordChoices(std::count_if(vertices(g).first, vertices(g).second, [&](Vertex<Graph> v) {return weights[v] == weights[*max];}));
+            #endif
+
             SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Max vertex is " << g[*max]);
 
             /* A set that contains all vertices u

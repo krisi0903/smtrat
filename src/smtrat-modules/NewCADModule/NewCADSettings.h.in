@@ -132,7 +132,7 @@ namespace cad {
 	//
 	// Settings to test different variable orderings
 	//
-	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFU, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown {};
+	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFO, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown {};
 
 
 	struct NewCADSettingsTriangular: NewCADBaseVariableOrderingSettings {
@@ -159,6 +159,16 @@ namespace cad {
 	struct NewCADSettingsChordalWithTriangularSecondary : NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangularETree>>";
 		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangularETree>;
+	};
+
+	struct NewCADSettingsChordalTriangularMCSM : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangularMCSM>>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangularMCSM>;
+	};
+
+	struct NewCADSettingsChordalTriangular : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangular>>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangular>;
 	};
 	//
 	// Settings to test different projection operators

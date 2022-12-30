@@ -37,10 +37,16 @@ namespace smtrat::cad::variable_ordering
         std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> start_times;
         typedef std::chrono::milliseconds timer_tick_interval;
 
+        unsigned long long choices = 1;
+
+
         inline std::string statFullName(std::string const& name) {
             return (std::stringstream() << mCurrentRun << ':' << name).str();
         }
 	public:
+        enum DetailLevel {NORMAL = 0, HIGH = 1};
+
+        constexpr static DetailLevel detail_level = HIGH;
 		template <typename T>
 		void _add(std::string const& key, T&& value) {
             SMTRAT_LOG_DEBUG("CADVOStatistics", "CADVOStatistics storing " << statFullName(key) << ":" << value);
@@ -54,7 +60,9 @@ namespace smtrat::cad::variable_ordering
         }
 
 		void nextRun() {
+            _add("choices", choices);
 			mCurrentRun++;
+            choices = 1;
 		}
 
         void startTimer(std::string const& _name) {
@@ -85,6 +93,15 @@ namespace smtrat::cad::variable_ordering
                 first = false;
             }
             this->_add("ordering", ss.str());
+        }
+
+        void recordChoices(unsigned long long choice) {
+            unsigned long long out;
+            if (__builtin_umulll_overflow(choice, this->choices, &out)) {
+                choices = 0;
+            } else {
+                choices = out;
+            }
         }
 
         template <typename Settings>

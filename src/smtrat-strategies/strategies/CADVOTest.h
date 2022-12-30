@@ -7,13 +7,13 @@
 
 namespace smtrat
 {
-	class CADChordalTriangular: public Manager
+	class CADVOTest: public Manager
 	{
 		public:
-			CADChordalTriangular(): Manager() {
+			CADVOTest(): Manager() {
 				setStrategy({
 					addBackend<SATModule<SATSettings1>>({
-						addBackend<NewCADModule<NewCADSettingsChordalWithTriangularSecondary>>()
+						addBackend<NewCADModule<NewCADSettingsPseudorandom>>()
 					})
 				});
 			}

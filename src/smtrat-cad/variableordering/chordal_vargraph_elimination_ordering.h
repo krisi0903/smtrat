@@ -41,16 +41,27 @@ namespace smtrat::cad::variable_ordering {
          */
         static constexpr VariableOrdering alternative_ordering = nullptr;
 
+        /**
+         * @brief The ordering after which to choose variables in MCS-M as a tie breaker
+         * 
+         */
+        static constexpr VariableOrdering mcs_m_secondary = nullptr;
+
     };
 
     struct ChordalOrderingSettingsTriangularETree : ChordalOrderingSettingsBase {
         static constexpr VariableOrdering etree_secondary_ordering = &triangular_ordering;
     };
 
+    struct ChordalOrderingSettingsTriangularMCSM : ChordalOrderingSettingsBase {
+        static constexpr VariableOrdering mcs_m_secondary = &triangular_ordering;
+    };
+
+    struct ChordalOrderingSettingsTriangular : ChordalOrderingSettingsBase {
+        static constexpr VariableOrdering etree_secondary_ordering = &triangular_ordering;
+        static constexpr VariableOrdering mcs_m_secondary = &triangular_ordering;
+    };
     template<typename Settings>
     std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vector<Poly>& polys);
-
-
-    //std::vector<varl::Variable> weighted_etree(const std::vector<Poly>& polys);
 
 }

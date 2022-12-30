@@ -7,13 +7,13 @@
 
 namespace smtrat
 {
-	class CADVOBrown: public Manager
+	class CADVOTest: public Manager
 	{
 		public:
-			CADVOBrown(): Manager() {
+			CADVOTest(): Manager() {
 				setStrategy({
 					addBackend<SATModule<SATSettings1>>({
-						addBackend<NewCADModule<NewCADSettingsBrownOrdering>>()
+						addBackend<NewCADModule<__CADSETTINGS__>>()
 					})
 				});
 			}

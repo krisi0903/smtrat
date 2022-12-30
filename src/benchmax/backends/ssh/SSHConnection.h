@@ -37,12 +37,13 @@ private:
 
 	/// Parse a duration from stdout.
 	std::chrono::milliseconds parse_duration(const std::string& output) const {
-		std::regex re("Start: ([0-9]+).*End: ([0-9]+)", std::regex::extended); //".*End: (\\d+)$");
-		std::smatch m;
-		if (std::regex_search(output, m, re)) {
+		std::regex re_start("Start: ([0-9]+)"); //".*End: (\\d+)$");
+		std::regex re_end("End: ([0-9]+)");
+		std::smatch m_start, m_end;
+		if (std::regex_search(output, m_start, re_start) && std::regex_search(output, m_end, re_end)) {
 			std::size_t p;
-			std::size_t start = std::stoull(m[1].str(), &p);
-			std::size_t end = std::stoull(m[2].str(), &p);
+			std::size_t start = std::stoull(m_start[1].str(), &p);
+			std::size_t end = std::stoull(m_end[1].str(), &p);
 			return std::chrono::milliseconds(end - start);
 		} else {
 			return std::chrono::milliseconds(0);

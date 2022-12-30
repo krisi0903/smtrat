@@ -1,7 +1,11 @@
 #pragma once
 #include "graph_common.h"
 #include "induced_subgraph.h"
+#include "CADVOStatistics.h"
 #include <filesystem>
+#include <iostream>
+#include <fstream>
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 namespace smtrat::cad::variable_ordering {
     template <typename Graph>
@@ -106,8 +110,8 @@ namespace smtrat::cad::variable_ordering {
      * @param g0 The input graph, must be chordal
      * @return EliminationTree<Graph> An elimination tree of the input graph.
      */
-    template <typename Graph>
-    EliminationTree<Graph> min_height_etree(Graph const& g0) {
+    template <typename Graph, typename Compare>
+    std::pair<EliminationTree<Graph>, std::list<Vertex<Graph>>> min_height_etree(Graph const& g0, Compare comp) {
         unsigned int i = 1;
         // we want to be able to remove vertices successively without modifying our input.
         // If we copied the graph, the VertexDescriptors in the new graph would be different
@@ -120,6 +124,7 @@ namespace smtrat::cad::variable_ordering {
         auto g = induce(g0, filter);
 
         std::map <Vertex<Graph>, int> labels;
+        std::list <Vertex<Graph>> peo;
         
 
         // Every iteration of this outer loop basically corresponds to one parallel computation
@@ -131,21 +136,42 @@ namespace smtrat::cad::variable_ordering {
             std::set <Vertex<Graph>> U = V;
 
             while(U.size() > 0) {
-                Vertex<Graph> v = *U.begin();
+                
+                // The loop below is not part of the original algorithm, but we decide
+                // to throw out all vertices with non-zero deficiency first, and then
+                // select one vertex (which has a guarenteed zero deficiency) to eliminate
+                // Since the vertices with nonzero deficiencly just get removed,
+                // their removal order does not have any impact on the algorithm (and with that, the final peo)
+                // and hence, we do not want to count these to our 'degrees of freedom' metric
+                for (Vertex<Graph> v : U) {
+                    if (!deficiency_zero(v, g)) {
+                        U.erase(v);
+                    }
+                }
+
+                if (U.size() == 0) break;
+
+                #ifdef SMTRAT_DEVOPTION_Statistics
+                cadVOStatistics.recordChoices(U.size());
+                #endif
+                Vertex<Graph> v = *std::min_element(U.begin(), U.end(), comp);
                 U.erase(v);
 
                 // If v has deficiency zero (i.e. the adjacent vertices form a clique)
                 // we can eliminate it without introducing fill.
                 // Also remove the adjacent vertices from the candidate set U, since they cannot be eliminated
                 // in parallel with v
-                if (deficiency_zero(v, g)) {
-                    labels[v] = i;
-                    
-                    for (auto [adj, adj_end] = adjacent_vertices(v,g); adj != adj_end; adj++) {
-                        U.erase(*adj);
-                    }
-                    V.erase(v);
+        
+                // because of the loop above, we know that deficiency is zero
+
+                labels[v] = i;
+                
+                for (auto [adj, adj_end] = adjacent_vertices(v,g); adj != adj_end; adj++) {
+                    U.erase(*adj);
                 }
+                V.erase(v);
+                peo.push_back(v);
+
                 
             }
             i++;
@@ -191,7 +217,7 @@ namespace smtrat::cad::variable_ordering {
             }
             
         }
-        return t;
+        return std::make_pair(t, peo);
     }
 
     template <typename Graph>
