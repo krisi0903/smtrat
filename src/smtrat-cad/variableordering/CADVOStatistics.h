@@ -37,7 +37,7 @@ namespace smtrat::cad::variable_ordering
         std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> start_times;
         typedef std::chrono::milliseconds timer_tick_interval;
 
-        unsigned long long choices = 1;
+        std::map<std::string, unsigned long long> choices;
 
 
         inline std::string statFullName(std::string const& name) {
@@ -60,9 +60,12 @@ namespace smtrat::cad::variable_ordering
         }
 
 		void nextRun() {
-            _add("choices", choices);
+            for (auto [key, value] : choicemap) {
+                _add("choices." + key, value);
+            }
+            
 			mCurrentRun++;
-            choices = 1;
+            choicemap.clear();
 		}
 
         void startTimer(std::string const& _name) {
@@ -95,12 +98,14 @@ namespace smtrat::cad::variable_ordering
             this->_add("ordering", ss.str());
         }
 
-        void recordChoices(unsigned long long choice) {
-            unsigned long long out;
+        void recordChoices(std::string name, unsigned long long choice) {
+            if (!choicemap.contains(name)) { choicemap[name] = 1;}
+
+            unsigned long long out = choicemap[name];
             if (__builtin_umulll_overflow(choice, this->choices, &out)) {
-                choices = 0;
+                choicemap[name] = 0;
             } else {
-                choices = out;
+                choicemap[name] = out;
             }
         }
 
@@ -109,9 +114,52 @@ namespace smtrat::cad::variable_ordering
 
         template <typename Settings>
         void collectProjectionInformation(smtrat::cad::CAD<Settings> const& cad);
+
+        void evaluateOrdering(std::vector<Poly> const& polys, std::vector<carl::Variable> const& ordering);
 	};
 
     extern CADVOStatistics& cadVOStatistics;
 }
+#else
 
+namespace smtrat::cad {
+    template <typename Settings>
+    class CAD;
+}
+namespace smtrat::cad::variable_ordering
+{
+
+	class CADVOStatistics {
+	public:
+        enum DetailLevel {NORMAL = 0, HIGH = 1};
+
+        constexpr static DetailLevel detail_level = HIGH;
+		template <typename T>
+		inline constexpr void _add(std::string const& key, T&& value) {}
+
+        template <typename T>
+        inline constexpr void _add(char const* key, T&& value) {}
+
+		inline constexpr void nextRun() {}
+
+        inline constexpr void startTimer(std::string const& _name) {}
+
+        inline constexpr void stopTimer(std::string const& _name) {}
+
+        inline constexpr void add(std::vector<carl::Variable> const& vo) {}
+
+        inline constexpr void recordChoices(unsigned long long choice) {}
+
+        template <typename Settings>
+        inline constexpr void collectLiftingInformation(smtrat::cad::CAD<Settings> const& cad) {}
+
+        template <typename Settings>
+        inline constexpr void collectProjectionInformation(smtrat::cad::CAD<Settings> const& cad) {}
+        
+        template <typename Settings>
+        inline constexpr void evaluateOrdering(std::vector<carl::Variable> const& ordering);
+	};
+
+    extern CADVOStatistics& cadVOStatistics;
+}
 #endif

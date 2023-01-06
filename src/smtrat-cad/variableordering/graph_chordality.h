@@ -121,7 +121,7 @@ namespace smtrat::cad::variable_ordering {
             VertexIterator<Graph> end = vertices(g).second;
 
             VertexIterator<Graph> max = std::max_element(vertices(g).first, vertices(g).second, [&](Vertex<Graph> const& v1, Vertex<Graph> const& v2) {
-                return weights[v1] < weights[v2] || (weights[v1] == weights[v2] && !comp(v1, v2));
+                return weights[v1] < weights[v2] || (weights[v1] == weights[v2] && comp(v2, v1));
             });
 
             #ifdef SMTRAT_DEVOPTION_Statistics

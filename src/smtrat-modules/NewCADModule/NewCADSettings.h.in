@@ -132,7 +132,7 @@ namespace cad {
 	//
 	// Settings to test different variable orderings
 	//
-	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFO, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionBrown {};
+	struct NewCADBaseVariableOrderingSettings : NewCADBaseSettings, cad::IncrementalityFO, cad::SampleCompareLT, cad::ProjectionOrderDefault, cad::ProjectionMcCallum {};
 
 
 	struct NewCADSettingsTriangular: NewCADBaseVariableOrderingSettings {
@@ -155,20 +155,15 @@ namespace cad {
 		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::brown_ordering;
 	};
 
-	
-	struct NewCADSettingsChordalWithTriangularSecondary : NewCADBaseVariableOrderingSettings {
-		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangularETree>>";
-		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangularETree>;
+
+	struct NewCADSettingsChordalNoETree: NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordal>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsNoETree>;
 	};
 
-	struct NewCADSettingsChordalTriangularMCSM : NewCADBaseVariableOrderingSettings {
-		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangularMCSM>>";
-		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangularMCSM>;
-	};
-
-	struct NewCADSettingsChordalTriangular : NewCADBaseVariableOrderingSettings {
-		static constexpr auto moduleName = "NewCADModule<NewCADChordal<ChordalOrderingSettingsTriangular>>";
-		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangular>;
+	struct NewCADSettingsDMFill : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADDMFill>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::degree_minimizing_fill;
 	};
 	//
 	// Settings to test different projection operators

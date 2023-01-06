@@ -8,23 +8,6 @@ namespace smtrat::cad::variable_ordering {
 
     typedef std::vector<carl::Variable> (*VariableOrdering)(const std::vector<Poly>& polys);
 
-
-    template <typename T>
-    class vec_order_comp {
-        std::map<T, std::size_t> ordmap;
-
-        public:
-        vec_order_comp(std::vector<T> const& vec) {
-            for (std::size_t i = 0; i < vec.size(); i++) {
-                ordmap[vec[i]] = i;
-            }
-        }
-
-        bool operator()(T v1, T v2) {
-            return ordmap[v1] < ordmap[v2];
-        }
-    };
-    
     template<typename T>
     class VariableMap {
     private:

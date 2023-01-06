@@ -2,6 +2,7 @@
 #include "graph_common.h"
 #include "induced_subgraph.h"
 #include "CADVOStatistics.h"
+#include "util.h"
 #include <filesystem>
 #include <iostream>
 #include <fstream>
@@ -101,6 +102,58 @@ namespace smtrat::cad::variable_ordering {
         
     }
 
+    template <typename Graph>
+    EliminationTree<Graph> etree(Graph const& g, std::list<Vertex<Graph>> peo) {
+        EliminationTree<Graph> t;
+        // add all vertices from the original graph into the tree, and store a mapping
+        // from input graph vertices to tree vertices
+        std::map<Vertex<Graph>, Vertex<EliminationTree<Graph>>> gtmap;
+        
+        for(auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
+            gtmap[*v] = boost::add_vertex({.v = *v}, t);
+        }
+
+        vec_order_comp comp(peo);
+
+        for(auto [v, v_end] = boost::vertices(t); v != v_end; v++) {
+            if (*v != gtmap[peo.back()]) {
+                auto [a, a_end] = boost::adjacent_vertices(*v, g);
+                Vertex<Graph> parent = *a;
+                for(; a != a_end; a++) {
+                    if (comp(*a, parent)) parent = *a;
+                }
+                boost::add_edge(*v, gtmap[parent], t);
+            }
+        }
+
+        std::set<Vertex<EliminationTree<Graph>>> curr;
+        std::set<Vertex<EliminationTree<Graph>>> next;
+
+        for (auto [v, v_end] = boost::vertices(t); v != v_end; v++) {
+            if (!boost::in_degree(*v, g)) {
+                curr.insert(*v);
+            }
+        }
+
+
+
+        uint height = 1;
+
+        while(curr.size() > 0) {
+            for (auto v : curr) {
+                t[v].class_label = height;
+                auto [p, p_end] = boost::adjacent_vertices(v, t);
+                if (p != p_end) next.insert(*p);
+            }
+            curr = next;
+            next.clear();
+            height++;
+        }
+
+        t[boost::graph_bundle].height = height;
+
+        return t;
+    }
 
     /**
      * @brief Generate the elimination tree of minimal height, given a chordal graph as input
@@ -143,11 +196,22 @@ namespace smtrat::cad::variable_ordering {
                 // Since the vertices with nonzero deficiencly just get removed,
                 // their removal order does not have any impact on the algorithm (and with that, the final peo)
                 // and hence, we do not want to count these to our 'degrees of freedom' metric
-                for (Vertex<Graph> v : U) {
-                    if (!deficiency_zero(v, g)) {
+                
+                { 
+                    std::list<Vertex<Graph>> to_remove;
+                    for (Vertex<Graph> v : U) {
+                        if (!deficiency_zero(v, g)) {
+                            to_remove.push_back(v);
+                        }
+                    }
+
+                    // we cannot remove in the upper loop, doing so would invalidate our iterators :/
+                    for (Vertex<Graph> v : to_remove) {
                         U.erase(v);
                     }
                 }
+                
+                
 
                 if (U.size() == 0) break;
 

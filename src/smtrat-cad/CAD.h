@@ -17,6 +17,10 @@
 #include "variableordering/variableordering.h"
 #include "variableordering/CADVOStatistics.h"
 
+// this is ugly but I need this to detect whether the ordering is chordality-based
+// should have done the orderings as classes probably, too late
+#include <smtrat-modules/NewCADModule/NewCADSettings.h>
+
 namespace smtrat {
 namespace cad {
 	#ifdef SMTRAT_DEVOPTION_Statistics
@@ -116,13 +120,12 @@ namespace cad {
 		}
 
 		void reset(const std::vector<Poly>& polys) {
-			#ifdef SMTRAT_DEVOPTION_Statistics
 			variable_ordering::cadVOStatistics.startTimer("variableOrderingTotalTime");
-			#endif
 			std::vector<carl::Variable> varsOrdered = Settings::variableOrdering(polys);
-			#ifdef SMTRAT_DEVOPTION_Statistics
 			variable_ordering::cadVOStatistics.stopTimer("variableOrderingTotalTime");
-			#endif
+			if constexpr (!std::is_base_of<NewCADSettingsChordal, Settings>()) {
+				variable_ordering::cadVOStatistics.evaluateOrdering(polys, varsOrdered);
+			}
 			SMTRAT_LOG_INFO("smtrat.cad", "Reset variable ordering: " << varsOrdered);
 			reset(varsOrdered);
 		}

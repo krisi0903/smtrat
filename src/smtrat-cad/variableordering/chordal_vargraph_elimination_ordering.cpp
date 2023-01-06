@@ -2,9 +2,11 @@
 #include "CADVOStatistics.h"
 #include "elimination_tree.h"
 #include "graph_chordality.h"
+#include "util.h"
 #include <algorithm>
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/graph/connected_components.hpp>
 #include <filesystem>
 #include <iostream>
 #include <numeric>
@@ -39,6 +41,109 @@ class VariableVertexCompareAdapter {
 	}
 };
 
+std::vector<carl::Variable> degree_minimizing_fill(std::vector<Poly> const& polys) {
+
+	struct DMVertexProp {
+		carl::Variable var;
+	};
+
+	struct DMEdgeProp {
+		std::map<void*, int> deg;
+	};
+
+	typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, DMVertexProp, DMEdgeProp> DMGraph;
+
+	std::map<carl::Variable, Vertex<DMGraph>> var_vertex_map;
+	DMGraph g;
+	
+	// Counter for the ID number we assign to vertices
+	// Our implementation of the MCS algorithm requires each vertex to have a unique index
+	// in the range [0; |V|)
+	unsigned int id = 0;
+
+	carl::carlVariables varset;
+
+	for (const Poly& p : polys) {
+		// Make sure that we have a vertex for each variable in our graph
+		for (auto var : carl::variables(p)) {
+			carl::variables(p, varset);
+			if (var_vertex_map.find(var) == var_vertex_map.end()) {
+				var_vertex_map[var] = boost::add_vertex({.var = var}, g);
+			}
+		}
+
+		// for each pair of variables in the polynomial, we add an edge to our graph
+		for (auto var1 : carl::variables(p)) {
+			for (auto var2 : carl::variables(p)) {
+				if (var1 != var2) {
+					auto [edge, exists] = boost::add_edge(var_vertex_map[var1], var_vertex_map[var2], g);
+					if (exists) {
+						g[edge].deg[var_vertex_map[var1]] += p.degree(var1);
+						g[edge].deg[var_vertex_map[var2]] += p.degree(var2);
+					} else {
+						g[edge].deg[var_vertex_map[var1]] = p.degree(var1);
+						g[edge].deg[var_vertex_map[var2]] = p.degree(var2);
+					}
+				}
+			}
+		}
+	}
+
+	std::vector<carl::Variable> peo;
+	
+	for (int i = boost::num_vertices(g); i > 0; i--) {
+		struct vedata_t {
+			int fill_count = 0;
+			int fill_degree = 0;
+		};
+
+		std::map<Vertex<DMGraph>, vedata_t> vedata_map;
+
+		for (auto [v, v_end] = boost::vertices(g); v != v_end; v_end++) {
+			vedata_map[*v] = {};
+			for (auto [a1, a1_end] = boost::adjacent_vertices(*v, g); a1 != a1_end; a1++) {
+				for (auto [a2, a2_end] = boost::adjacent_vertices(*v, g); a2 != a2_end; a2++) {
+					if (*a1 != *a2) {
+						auto [edge, exists] = boost::edge(*a1, *a2, g);
+						if (exists) {
+							vedata_map[*v].fill_count++;
+							vedata_map[*v].fill_degree += g[boost::edge(*v, *a1, g).first].deg[*a1] + g[boost::edge(*v, *a2, g).first].deg[*a2];
+						}
+					}
+				}
+			}
+		}
+
+		Vertex<DMGraph> v = std::min_element(vedata_map.begin(), vedata_map.end(), [&](auto p1, auto p2) {
+			return p1.second.fill_count < p2.second.fill_count || (p1.second.fill_count == p2.second.fill_count && 
+					p1.second.fill_degree < p2.second.fill_degree);
+		})->first;
+
+
+		for (auto [a1, a1_end] = boost::adjacent_vertices(v, g); a1 != a1_end; a1++) {
+			for (auto [a2, a2_end] = boost::adjacent_vertices(v, g); a2 != a2_end; a2++) {
+				if (*a1 != *a2) {
+					auto [edge, exists] = boost::add_edge(*a1, *a2, g);
+					if (exists) {
+						g[edge].deg[*a1] += g[boost::edge(v, *a1, g).first].deg[*a1];
+						g[edge].deg[*a2] += g[boost::edge(v, *a2, g).first].deg[*a2];
+					} else {
+						g[edge].deg[*a1] += g[boost::edge(v, *a1, g).first].deg[*a1];
+						g[edge].deg[*a2] += g[boost::edge(v, *a2, g).first].deg[*a2];
+					}
+				}
+			}
+		}
+
+		peo.push_back(g[v].var);
+
+		boost::clear_vertex(v, g);
+		boost::remove_vertex(v, g);
+	}
+	std::vector<carl::Variable> var_vector(std::move(varset.as_vector()));
+	assert(std::is_permutation(peo.begin(), peo.end(), var_vector.begin(), var_vector.end()));
+	return peo;
+}
 /*!
  * A small utility function to print out the "chordal structure of the polynomial set" in a .dot
  * file for visualization and better debugging
@@ -126,25 +231,39 @@ std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vec
 		}
 	}
 
-#ifdef SMTRAT_DEVOPTION_Statistics
+
 	cadVOStatistics.stopTimer("buildVariableGraph");
+
+
+	std::map<Vertex<ChordalStructure>, int> component_map;
+	int connected_components;
+	{
+		std::map<Vertex<ChordalStructure>, boost::default_color_type> _colormap;
+		connected_components = boost::connected_components(chordal_structure, boost::associative_property_map<std::map<Vertex<ChordalStructure>, int>>(component_map), boost::color_map(boost::associative_property_map<std::map<Vertex<ChordalStructure>, boost::default_color_type>>(_colormap)));
+	}
+
+	cadVOStatistics._add("connected_components", connected_components);
+
+	if (connected_components != 1) {
+		return Settings::alternative_ordering(polys);
+	}
+
 	cadVOStatistics.startTimer("tryBuildPEO");
-#endif
+
 
 	auto peo = mcs(chordal_structure);
 	auto fill = elimination_game(chordal_structure, peo);
 
-#ifdef SMTRAT_DEVOPTION_Statistics
+
 	cadVOStatistics.stopTimer("tryBuildPEO");
-#endif
+
 
 	if (fill.size()) {
-#ifdef SMTRAT_DEVOPTION_Statistics
 		cadVOStatistics.startTimer("buildMEO");
-#endif
+
 
 		if constexpr (Settings::mcs_m_secondary) {
-			vec_order_comp<carl::Variable> secondary(Settings::mcs_m_secondary(polys));
+			vec_order_comp secondary(Settings::mcs_m_secondary(polys));
 			std::tie(peo, fill) = mcs_m(chordal_structure, [&](Vertex<ChordalStructure> v1, Vertex<ChordalStructure> v2) {
                 carl::Variable var1 = chordal_structure[v1].var, var2 = chordal_structure[v2].var;
 				return secondary(var2, var1) || (!secondary(var1, var2) && !secondary(var2, var1) && stable_var_comp(var1, var2));
@@ -159,32 +278,36 @@ std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vec
 		for (auto const& pair : fill) {
 			add_edge(pair.first, pair.second, {.poly = nullptr, .fillEdge = true}, chordal_structure);
 		}
-#ifdef SMTRAT_DEVOPTION_Statistics
+
 		cadVOStatistics.stopTimer("buildMEO");
-#endif
+
 		SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Have " << num_vertices(chordal_structure) << " vertices with " << num_edges(chordal_structure) << " edges. " << fill.size() << " fill-in edges to make graph chordal with given PEO, a percentage of " << 100 * (fill.size() / (double)num_edges(chordal_structure) + fill.size()) << "%'.");
 
-	} else {
+	} 
+	
+	if constexpr (Settings::do_etree) {
 		// if the graph is chordal, we can compute the minimum height etree
 		// and possibly get a better ordering
-		SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Graph was chordal - computing shortest e-tree");
-#ifdef SMTRAT_DEVOPTION_Statistics
+		SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", " - computing shortest e-tree");
+
 		cadVOStatistics.startTimer("buildETree");
-#endif
+
 		EliminationTree<ChordalStructure> t;
 		if constexpr (Settings::etree_secondary_ordering != nullptr) {
-			std::tie(t, peo) = min_height_etree(chordal_structure, VariableVertexCompareAdapter(chordal_structure, vec_order_comp<carl::Variable>(Settings::etree_secondary_ordering(polys))));
+			std::tie(t, peo) = min_height_etree(chordal_structure, VariableVertexCompareAdapter(chordal_structure, vec_order_comp(Settings::etree_secondary_ordering(polys))));
 		} else {
 			std::tie(t, peo) = min_height_etree(chordal_structure, VariableVertexCompareAdapter(chordal_structure, stable_var_comp));
 		}
 		
-#ifdef SMTRAT_DEVOPTION_Statistics
+
 		cadVOStatistics.stopTimer("buildETree");
 
 		if constexpr (debugChordalVargraph) {
 			cadVOStatistics._add("ordering.etree.graph_dot", print_graphviz_etree<ChordalStructure>(t));
 		}
-#endif
+
+		cadVOStatistics._add("ordering.etree.height", t[boost::graph_bundle].height);
+
 
 		/*
 #ifdef SMTRAT_DEVOPTION_Statistics
@@ -228,19 +351,19 @@ std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vec
 
 #ifdef SMTRAT_DEVOPTION_Statistics
 		cadVOStatistics.stopTimer("buildETreePEO");
-		cadVOStatistics._add("ordering.etree.height", t[boost::graph_bundle].height);
+		
 #endif
 	*/
 	}
 
-#ifdef SMTRAT_DEVOPTION_Statistics
+
 	cadVOStatistics._add("ordering.vertices", boost::num_vertices(chordal_structure));
 	cadVOStatistics._add("ordering.edges", num_edges(chordal_structure));
 	cadVOStatistics._add("ordering.filledges", fill.size());
 	if constexpr (debugChordalVargraph) {
 		cadVOStatistics._add("ordering.graph_dot", print_graphviz<ChordalStructure>(chordal_structure));
 	}
-#endif
+
 
 	assert(elimination_game(chordal_structure, peo).size() == 0);
 
@@ -260,9 +383,10 @@ std::vector<carl::Variable> chordal_vargraph_elimination_ordering(const std::vec
 	return res;
 }
 
+
+
+
 template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsBase>(const std::vector<Poly>& polys);
-template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsTriangularETree>(const std::vector<Poly>& polys);
-template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsTriangularMCSM>(const std::vector<Poly>& polys);
-template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsTriangular>(const std::vector<Poly>& polys);
+template std::vector<carl::Variable> chordal_vargraph_elimination_ordering<ChordalOrderingSettingsNoETree>(const std::vector<Poly>& polys);
 
 } // namespace smtrat::cad::variable_ordering

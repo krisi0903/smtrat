@@ -86,6 +86,7 @@ namespace smtrat
 	template<class Settings>
 	Answer NewCADModule<Settings>::checkCore()
 	{
+		cad::variable_ordering::cadVOStatistics._add("reset", mCAD.dim() != mVariables.size());
 		if (mCAD.dim() != mVariables.size()) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Init with " << mPolynomials);
 			mCAD.reset(mPolynomials);
@@ -122,6 +123,7 @@ namespace smtrat
 		mStatistics.currentProjectionSize(mCAD.getProjection().size());
 		cad::variable_ordering::cadVOStatistics.stopTimer("cad.time");
 
+		cad::variable_ordering::cadVOStatistics._add("answer", answer);
 		cad::variable_ordering::cadVOStatistics.collectLiftingInformation<Settings>(mCAD);
 		cad::variable_ordering::cadVOStatistics.collectProjectionInformation<Settings>(mCAD);
 #endif
@@ -155,9 +157,7 @@ namespace smtrat
 				}
 			}
 		}
-		#ifdef SMTRAT_DEVOPTION_Statistics
 		cad::variable_ordering::cadVOStatistics.nextRun();
-		#endif
 		return answer;
 	}
 }
