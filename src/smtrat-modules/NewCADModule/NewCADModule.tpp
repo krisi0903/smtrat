@@ -86,13 +86,12 @@ namespace smtrat
 	template<class Settings>
 	Answer NewCADModule<Settings>::checkCore()
 	{
-		cad::variable_ordering::cadVOStatistics._add("reset", mCAD.dim() != mVariables.size());
-		if (mCAD.dim() != mVariables.size()) {
+		cad::variable_ordering::cadVOStatistics._add("reset",mCAD.dim() != mVariables.size() || Settings::reset_heuristic == cad::ResetHeuristic::ALWAYS);
+		if (mCAD.dim() != mVariables.size() || Settings::reset_heuristic == cad::ResetHeuristic::ALWAYS) {
 			SMTRAT_LOG_DEBUG("smtrat.cad", "Init with " << mPolynomials);
 			mCAD.reset(mPolynomials);
 		}
 #ifdef SMTRAT_DEVOPTION_Statistics
-		cad::variable_ordering::cadVOStatistics._add("polys.size", mPolynomials.size());
 		cad::variable_ordering::cadVOStatistics._add("vars.size", mVariables.size());
 		mStatistics.called();
 #endif

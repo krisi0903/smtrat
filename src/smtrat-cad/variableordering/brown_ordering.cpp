@@ -1,17 +1,22 @@
 #include "brown_ordering.h"
 #include "variableordering.h"
-
+#include "pseudorandom_ordering.h"
+#include "util.h"
 #include <algorithm>
 #include <numeric>
 
 namespace smtrat::cad::variable_ordering {
 
-
+template <typename Compare>
 struct brown_data {
 	VariableMap<std::size_t> max_deg;
 	VariableMap<std::size_t> max_term_tdeg;
 	VariableMap<std::size_t> term_count;
 	
+	Compare stable_var_comp;
+
+	brown_data(Compare stable_var_comp) : stable_var_comp(stable_var_comp) {}
+
 	bool operator()(carl::Variable lhs, carl::Variable rhs) const {
 		SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Comparing maxdeg " << lhs << " < " << rhs << "? " << max_deg[lhs] << " > " << max_deg[rhs]);
 		if (max_deg[lhs] != max_deg[rhs]) return max_deg[lhs] < max_deg[rhs];
@@ -26,7 +31,7 @@ struct brown_data {
 std::vector<carl::Variable> brown_ordering(const std::vector<Poly>& polys) {
 	SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Building order based on " << polys);
 	carl::carlVariables vars;
-	brown_data data;
+	brown_data data(vec_order_comp(pseudorandom_ordering(polys)));
 
 	for (std::size_t i = 0; i < polys.size(); ++i) {
 		for (Poly::TermType const& term : polys[i].terms()) {

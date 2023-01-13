@@ -1,14 +1,21 @@
 #include "triangular_ordering.h"
 #include "variableordering.h"
+#include "pseudorandom_ordering.h"
+#include "util.h"
 #include <algorithm>
 #include <numeric>
 
 namespace smtrat::cad::variable_ordering {
 
+template <typename Compare>
 struct triangular_data {
 	VariableMap<std::size_t> max_deg;
 	VariableMap<std::size_t> max_tdeg;
 	VariableMap<std::size_t> sum_deg;
+
+	Compare stable_var_comp;
+
+	triangular_data(Compare stable_var_comp) : stable_var_comp(stable_var_comp) {}
 	
 	bool operator()(carl::Variable lhs, carl::Variable rhs) const {
 		SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Comparing maxdeg " << lhs << " < " << rhs << "? " << max_deg[lhs] << " > " << max_deg[rhs]);
@@ -24,7 +31,7 @@ struct triangular_data {
 std::vector<carl::Variable> triangular_ordering(const std::vector<Poly>& polys) {
 	SMTRAT_LOG_DEBUG("smtrat.cad.variableordering", "Building order based on " << polys);
 	carl::carlVariables vars;
-	triangular_data data;
+	triangular_data data(vec_order_comp(pseudorandom_ordering(polys)));
 	std::vector<VariableMap<std::size_t>> maxdeg;
 	maxdeg.resize(polys.size());
 	for (std::size_t i = 0; i < polys.size(); ++i) {

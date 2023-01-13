@@ -37,8 +37,6 @@ namespace smtrat::cad::variable_ordering
         std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> start_times;
         typedef std::chrono::milliseconds timer_tick_interval;
 
-        std::map<std::string, unsigned long long> choices;
-
 
         inline std::string statFullName(std::string const& name) {
             return (std::stringstream() << mCurrentRun << ':' << name).str();
@@ -59,13 +57,8 @@ namespace smtrat::cad::variable_ordering
             this->_add(temp, value);
         }
 
-		void nextRun() {
-            for (auto [key, value] : choicemap) {
-                _add("choices." + key, value);
-            }
-            
+		void nextRun() {       
 			mCurrentRun++;
-            choicemap.clear();
 		}
 
         void startTimer(std::string const& _name) {
@@ -96,17 +89,6 @@ namespace smtrat::cad::variable_ordering
                 first = false;
             }
             this->_add("ordering", ss.str());
-        }
-
-        void recordChoices(std::string name, unsigned long long choice) {
-            if (!choicemap.contains(name)) { choicemap[name] = 1;}
-
-            unsigned long long out = choicemap[name];
-            if (__builtin_umulll_overflow(choice, this->choices, &out)) {
-                choicemap[name] = 0;
-            } else {
-                choicemap[name] = out;
-            }
         }
 
         template <typename Settings>

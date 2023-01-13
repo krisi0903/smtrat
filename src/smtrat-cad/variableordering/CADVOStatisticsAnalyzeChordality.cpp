@@ -7,21 +7,20 @@
 #include <boost/graph/connected_components.hpp>
 #include "graph_chordality.h"
 #include "util.h"
+#include "associated_graph.h"
 #include "elimination_tree.h"
+#include "graphviz_debug.h"
 
 namespace smtrat::cad::variable_ordering {
     
     void CADVOStatistics::evaluateOrdering(std::vector<Poly> const& polys, std::vector<carl::Variable> const& _ordering) {
         
-        struct VariableVertexProperties {
-            carl::Variable var;
-        };
 
         struct VariableEdgeProperties {
             bool fillEdge;
         };
 
-        typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, VariableVertexProperties, VariableEdgeProperties> ChordalStructure;
+        typedef boost::adjacency_list<boost::setS, boost::setS, boost::undirectedS, VariableVertexPropertiesBase, VariableEdgeProperties> ChordalStructure;
 
         std::map<carl::Variable, Vertex<ChordalStructure>> var_vertex_map;
 	    ChordalStructure chordal_structure;
@@ -77,7 +76,12 @@ namespace smtrat::cad::variable_ordering {
             auto edge = boost::add_edge(v1, v2, {.fillEdge = true}, chordal_structure);
         }
 
+
+        print_graphviz(chordal_structure);
+
         EliminationTree<ChordalStructure> t = etree(chordal_structure, ordering);
+
+        print_graphviz_etree(t);
 
         _add("ordering.etree.height", t[boost::graph_bundle].height);
 

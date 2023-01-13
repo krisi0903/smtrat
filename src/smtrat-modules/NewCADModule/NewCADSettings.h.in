@@ -17,6 +17,12 @@
 
 namespace smtrat {
 namespace cad {
+
+	enum class ResetHeuristic {
+		AVOID,
+		ALWAYS
+	};
+
 	/// Mixin that provides settings for incrementality and backtracking.
 	template<Incrementality I, Backtracking B>
 	struct IncrementalityMixin {
@@ -87,6 +93,7 @@ namespace cad {
 }
 
 	struct NewCADBaseSettings: cad::MISHeuristicGreedy {
+		static constexpr cad::ResetHeuristic reset_heuristic = cad::ResetHeuristic::AVOID;
 		static constexpr cad::CoreHeuristic coreHeuristic = cad::CoreHeuristic::PreferSampling;
 		static constexpr std::size_t trivialSampleRadius = 1;
 		static constexpr bool simplifyProjectionByBounds = false;
@@ -155,16 +162,33 @@ namespace cad {
 		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::brown_ordering;
 	};
 
+	struct NewCADSettingsChordalTriangular : NewCADSettingsChordal {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordalTriangular>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangular>;
+	};
 
-	struct NewCADSettingsChordalNoETree: NewCADBaseVariableOrderingSettings {
-		static constexpr auto moduleName = "NewCADModule<NewCADChordal>";
+	struct NewCADSettingsChordalTriangularReset : NewCADSettingsChordal {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordalTriangularReset>";
+		static constexpr cad::ResetHeuristic reset_heuristic = cad::ResetHeuristic::ALWAYS;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsTriangular>;
+	};
+
+	struct NewCADSettingsChordalNoETree: NewCADSettingsChordal {
+		static constexpr auto moduleName = "NewCADModule<NewCADChordalNoETree>";
 		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::chordal_vargraph_elimination_ordering<smtrat::cad::variable_ordering::ChordalOrderingSettingsNoETree>;
 	};
 
 	struct NewCADSettingsDMFill : NewCADBaseVariableOrderingSettings {
 		static constexpr auto moduleName = "NewCADModule<NewCADDMFill>";
-		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::degree_minimizing_fill;
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::degree_minimizing_fill<false>;
 	};
+
+	struct NewCADSettingsDMFillChordal : NewCADBaseVariableOrderingSettings {
+		static constexpr auto moduleName = "NewCADModule<NewCADDMFillChordal>";
+		static constexpr cad::variable_ordering::VariableOrdering variableOrdering = &smtrat::cad::variable_ordering::degree_minimizing_fill<true>;
+	};
+
+
 	//
 	// Settings to test different projection operators
 	//

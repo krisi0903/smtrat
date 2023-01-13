@@ -10,30 +10,25 @@ namespace smtrat::cad::variable_ordering {
     struct DegreeCollector {
 
         struct Statistics {
-            std::size_t max;
-            std::size_t min;
-            std::size_t sum;
+            std::size_t max = 0;
+            std::size_t sum = 0;
         };
 
-        Statistics degree, tdegree;
+        Statistics degree = {}, tdegree = {};
 
 
         void operator()(const Poly& p) {
             degree.max = std::max(degree.max, carl::total_degree(p));
-            degree.min = std::min(degree.min, carl::total_degree(p));
             degree.sum += carl::total_degree(p);
             tdegree.max = std::max(tdegree.max, carl::total_degree(p));
             tdegree.sum += carl::total_degree(p);
-            tdegree.min = std::min(tdegree.min, carl::total_degree(p));
         }
         void operator()(const carl::UnivariatePolynomial<Poly>& p) {
             degree.max = std::max(degree.max, p.degree());
-            degree.min = std::min(degree.min, p.degree());
             degree.sum += p.degree();
         
             tdegree.max = std::max(tdegree.max, carl::total_degree(p));
             tdegree.sum += carl::total_degree(p);
-            tdegree.min = std::min(tdegree.min, carl::total_degree(p));
         }
         void operator()(const ConstraintT& c) {
             (*this)(c.lhs());
@@ -60,10 +55,10 @@ namespace smtrat::cad::variable_ordering {
     void CADVOStatistics::collectProjectionInformation(smtrat::cad::CAD<Settings> const& cad) {
         
         auto const& proj = cad.getProjection();
-        DegreeCollector dc;
+        DegreeCollector dc = {};
 
         std::size_t sum = 0;
-        for (std::size_t level = 1; level <= proj.dim(); ++level) {
+        for (std::size_t level = 0; level <= proj.dim(); ++level) {
             sum += proj.size(level);
             Poly prod(1);
             for (std::size_t pid = 0; pid < proj.size(level); ++pid) {
@@ -85,14 +80,26 @@ namespace smtrat::cad::variable_ordering {
                         combined_degree = degree;
                     }
                 }
-                this->_add((std::stringstream() << "projection." << level << ".combined_degree").str(), combined_degree);
-                this->_add((std::stringstream() << "projection." << level << ".size").str(), proj.size(level));
-                this->_add((std::stringstream() << "projection." << level << ".deg_max").str(), dc.degree.max);
-                this->_add((std::stringstream() << "projection." << level << ".deg_min").str(), dc.degree.min);
-                this->_add((std::stringstream() << "projection." << level << ".deg_sum").str(), dc.degree.sum);
-                this->_add((std::stringstream() << "projection." << level << ".tdeg_max").str(), dc.tdegree.max);
-                this->_add((std::stringstream() << "projection." << level << ".tdeg_min").str(), dc.tdegree.min);
-                this->_add((std::stringstream() << "projection." << level << ".tdeg_sum").str(), dc.tdegree.sum);
+
+                // level n should contain n-variate polynomials, which are on level 1 in the smtrat-cad
+                // level 1 should contain univariate polynomials, which are on level n in the smtrat-cad
+                if (level == 0) {
+                    this->_add("polys_combined_degree", combined_degree);
+                    this->_add("polys_size", proj.size(level));
+                    this->_add("polys_deg_max", dc.degree.max);
+                    this->_add("polys_deg_sum", dc.degree.sum);
+                    this->_add("polys_tdeg_max", dc.tdegree.max);
+                    this->_add("polys_tdeg_sum", dc.tdegree.sum);
+                } else {
+                    std::size_t display_level = level;
+                    this->_add((std::stringstream() << "projection." << display_level << ".combined_degree").str(), combined_degree);
+                    this->_add((std::stringstream() << "projection." << display_level << ".size").str(), proj.size(level));
+                    this->_add((std::stringstream() << "projection." << display_level << ".deg_max").str(), dc.degree.max);
+                    this->_add((std::stringstream() << "projection." << display_level << ".deg_sum").str(), dc.degree.sum);
+                    this->_add((std::stringstream() << "projection." << display_level << ".tdeg_max").str(), dc.tdegree.max);
+                    this->_add((std::stringstream() << "projection." << display_level << ".tdeg_sum").str(), dc.tdegree.sum);
+                }
+                
                 dc = {};
             }
         }

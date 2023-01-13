@@ -88,6 +88,7 @@ namespace smtrat::cad::variable_ordering {
         Graph g = chordalStructure;
         int n = boost::num_vertices(g);
 
+        long double dor = std::numeric_limits<long double>::quiet_NaN();
 
         // Create a vector that maps vertex IDs to vertex descriptors of the original graph
         // This is used to map vertices descriptors of the copy graph to those of the original graph
@@ -124,9 +125,10 @@ namespace smtrat::cad::variable_ordering {
                 return weights[v1] < weights[v2] || (weights[v1] == weights[v2] && comp(v2, v1));
             });
 
-            #ifdef SMTRAT_DEVOPTION_Statistics
-            cadVOStatistics.recordChoices(std::count_if(vertices(g).first, vertices(g).second, [&](Vertex<Graph> v) {return weights[v] == weights[*max];}));
-            #endif
+            if (std::isnan(dor)) { dor = 1;}
+
+            dor *= std::count_if(vertices(g).first, vertices(g).second, [&](Vertex<Graph> v) {return weights[v] == weights[*max];});
+            dor /= i;
 
             SMTRAT_LOG_TRACE("smtrat.cad.variableordering", "Max vertex is " << g[*max]);
 
@@ -182,6 +184,7 @@ namespace smtrat::cad::variable_ordering {
             boost::remove_vertex(*max, g);
         }
 
+        cadVOStatistics._add("choices_mcs_m", dor);
 
         return std::make_pair(peo, fill);
     }

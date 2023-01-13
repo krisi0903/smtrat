@@ -8,6 +8,7 @@
 #include <fstream>
 #include "boost/date_time/posix_time/posix_time.hpp"
 
+
 namespace smtrat::cad::variable_ordering {
     template <typename Graph>
     struct ETreeVertexProperties {
@@ -22,72 +23,7 @@ namespace smtrat::cad::variable_ordering {
     };
 
     template <typename Graph>
-    using EliminationTree = boost::adjacency_list<boost::setS, boost::setS, boost::directedS, ETreeVertexProperties<Graph>, boost::no_property, ETreeProperties<Graph>>;
-
-
-    /*!
-     * A small utility function to print out the "chordal structure of the polynomial set" in a .doft
-     * file for visualization and better debugging
-     * a .dot file is automatically created in the current working directory
-     */
-    template <typename Graph>
-    std::string print_graphviz_etree(EliminationTree<Graph> const& g) {
-        std::filesystem::path basedir("/tmp/smtrat-debug-graphs");
-        std::filesystem::create_directories(basedir);
-        boost::posix_time::ptime current_time(boost::posix_time::second_clock::local_time());
-        std::string current_time_s = boost::posix_time::to_iso_string(current_time);
-        std::filesystem::path filename = basedir / ("variable-graph-etree-" + current_time_s + ".dot");
-        
-        // If just the time does not work (when we are drawing multiple graphs in the same second)
-        // we add an index and increment as long as the filename still exists
-        if (std::filesystem::exists(filename)) {
-            int i = 0;
-            do {
-                filename = basedir / ("variable-graph-etree" + current_time_s + "-" + std::to_string(++i) + ".dot");
-            } while(std::filesystem::exists(filename));
-        }
-        std::ofstream filestream(filename);
-
-        filestream << "digraph G {\n";
-
-        std::vector<Vertex<EliminationTree<Graph>>> vertices;
-        vertices.reserve(num_vertices(g));
-        for (auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
-            vertices.push_back(*v);
-        }
-
-        auto comp = [&](Vertex<EliminationTree<Graph>> v1, Vertex<EliminationTree<Graph>> v2) -> bool {
-            return g[v1].class_label < g[v2].class_label;
-        };
-        std::sort(vertices.begin(), vertices.end(), comp);
-
-        auto range_begin = vertices.begin();
-        auto range_end = vertices.begin();
-
-        while(range_begin != vertices.end()) {
-            for(; range_end != vertices.end() && g[*range_end].class_label == g[*range_begin].class_label; range_end++);
-            int level = g[*range_begin].class_label;
-            filestream << "\tsubgraph level_" << level << " {\n\t\trank=same\n";
-            for (auto curr = range_begin; curr != range_end; curr++) {
-                // 
-                filestream << "\t\t" << (*g[boost::graph_bundle].base)[g[*curr].v] << ";\n";
-            }
-            filestream << "\t}\n\n";
-            range_begin = range_end;
-        } 
-
-        for(auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
-            auto [p, p_end] = adjacent_vertices(*v,g);
-            if (p != p_end) {
-                filestream << "\t" << (*g[boost::graph_bundle].base)[g[*v].v] << " -> " << (*g[boost::graph_bundle].base)[g[*p].v] << ";\n";
-            }
-
-        }
-        filestream << "}\n";
-        filestream.close();
-        return filename;
-    } 
-
+    using EliminationTree = boost::adjacency_list<boost::setS, boost::setS, boost::bidirectionalS, ETreeVertexProperties<Graph>, boost::no_property, ETreeProperties<Graph>>;
 
     template<typename Graph>
     bool deficiency_zero(Vertex<Graph> v, Graph const& g) {
@@ -103,7 +39,7 @@ namespace smtrat::cad::variable_ordering {
     }
 
     template <typename Graph>
-    EliminationTree<Graph> etree(Graph const& g, std::list<Vertex<Graph>> peo) {
+    EliminationTree<Graph> etree(Graph const& g, std::list<Vertex<Graph>> const& peo) {
         EliminationTree<Graph> t;
         // add all vertices from the original graph into the tree, and store a mapping
         // from input graph vertices to tree vertices
@@ -115,14 +51,17 @@ namespace smtrat::cad::variable_ordering {
 
         vec_order_comp comp(peo);
 
-        for(auto [v, v_end] = boost::vertices(t); v != v_end; v++) {
-            if (*v != gtmap[peo.back()]) {
-                auto [a, a_end] = boost::adjacent_vertices(*v, g);
-                Vertex<Graph> parent = *a;
-                for(; a != a_end; a++) {
-                    if (comp(*a, parent)) parent = *a;
+        for(auto [v, v_end] = boost::vertices(g); v != v_end; v++) {
+            if (*v != peo.back()) {
+                
+                Vertex<Graph> parent = nullptr;
+                for(auto [a, a_end] = boost::adjacent_vertices(*v, g); a != a_end; a++) {
+                    if (comp(*v, *a) && (parent == nullptr || comp(*a, parent))) parent = *a;
                 }
-                boost::add_edge(*v, gtmap[parent], t);
+                if (parent != nullptr) {
+                    boost::add_edge(gtmap[*v], gtmap[parent], t);
+                }
+                
             }
         }
 
@@ -130,16 +69,17 @@ namespace smtrat::cad::variable_ordering {
         std::set<Vertex<EliminationTree<Graph>>> next;
 
         for (auto [v, v_end] = boost::vertices(t); v != v_end; v++) {
-            if (!boost::in_degree(*v, g)) {
+            if (!boost::in_degree(*v, t)) {
                 curr.insert(*v);
             }
         }
 
 
 
-        uint height = 1;
+        uint height = 0;
 
         while(curr.size() > 0) {
+            height++;
             for (auto v : curr) {
                 t[v].class_label = height;
                 auto [p, p_end] = boost::adjacent_vertices(v, t);
@@ -147,10 +87,10 @@ namespace smtrat::cad::variable_ordering {
             }
             curr = next;
             next.clear();
-            height++;
         }
 
         t[boost::graph_bundle].height = height;
+        t[boost::graph_bundle].base = const_cast<Graph*>(&g);
 
         return t;
     }
@@ -165,6 +105,8 @@ namespace smtrat::cad::variable_ordering {
      */
     template <typename Graph, typename Compare>
     std::pair<EliminationTree<Graph>, std::list<Vertex<Graph>>> min_height_etree(Graph const& g0, Compare comp) {
+
+        long double dor = std::numeric_limits<long double>::quiet_NaN();
         unsigned int i = 1;
         // we want to be able to remove vertices successively without modifying our input.
         // If we copied the graph, the VertexDescriptors in the new graph would be different
@@ -215,9 +157,11 @@ namespace smtrat::cad::variable_ordering {
 
                 if (U.size() == 0) break;
 
-                #ifdef SMTRAT_DEVOPTION_Statistics
-                cadVOStatistics.recordChoices(U.size());
-                #endif
+                if (std::isnan(dor)) {dor = 1;}
+
+                dor *= U.size();
+                dor /= V.size();
+
                 Vertex<Graph> v = *std::min_element(U.begin(), U.end(), comp);
                 U.erase(v);
 
@@ -240,6 +184,8 @@ namespace smtrat::cad::variable_ordering {
             }
             i++;
         }
+
+        cadVOStatistics._add("choices_etree", dor);
 
         // Now, construct the elimination tree, which we are just going to model as a bgl directed graph
         // every ETree vertex holds two properties:
